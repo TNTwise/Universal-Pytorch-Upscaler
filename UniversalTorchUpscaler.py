@@ -115,7 +115,7 @@ class UpscaleImage:
                 with torch.no_grad():
                     output_tile = self.renderImage(input_tile)
                 
-                #print(f'\tTile {tile_idx}/{tiles_x * tiles_y}')
+                print(f'\tTile {tile_idx}/{tiles_x * tiles_y}')
 
                 # output tile area on total image
                 output_start_x = input_start_x * self.scale
@@ -161,7 +161,7 @@ class handleApplication:
         if self.tileSize == 0:
             upscaledTensor = upscale.renderImage(imageTensor)
         else:
-            upscaledTensor = upscale.renderTiledImage(imageTensor)
+            upscaledTensor = upscale.renderTiledImage(imageTensor,self.tileSize)
         upscaledImage = upscale.tensorToImage(upscaledTensor)
         self.saveImage(upscaledImage)
         
@@ -179,6 +179,8 @@ class handleApplication:
         self.isCPU = self.args.c
         self.tileSize = int(self.args.t)
 
+        if self.inputImage == self.outputImage:
+            raise os.error("Input and output cannot be the same image.")
         if not isDir: # Executed if it is not rendering an image directory
             
             
