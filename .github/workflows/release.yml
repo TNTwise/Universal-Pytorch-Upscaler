@@ -45,7 +45,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m pyinstaller --onefile UniversalTorchUpscaler.py
+              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
       
       - name: upload
         uses: actions/upload-artifact@v3
@@ -78,7 +78,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m pyinstaller --onefile UniversalTorchUpscaler.py
+              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
       
       - name: upload
         uses: actions/upload-artifact@v3
@@ -112,7 +112,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m pyinstaller --onefile UniversalTorchUpscaler.py
+              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
       
       - name: upload
         uses: actions/upload-artifact@v3
