@@ -27,7 +27,7 @@ class UpscaleImage:
         self.model = ModelLoader().load_from_file(modelPath)
         assert isinstance(self.model, ImageModelDescriptor)
     
-    def setDevice(self,device = "cuda" if torch.cuda.is_available() else "cpu"):
+    def setDevice(self,device):
         if device == "cpu":
             self.model.eval().cpu()
         if device == "cuda":
@@ -63,7 +63,11 @@ class handleApplication:
         self.args = self.handleArguments(sys.argv)
         self.checkArguments()
         self.Upscale()
-        
+    
+    def returnDevice(self):
+        if not self.isCPU:
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        return "cpu"
     def saveImage(self,image: Image):
         image.save(self.outputImage)
     
@@ -72,7 +76,8 @@ class handleApplication:
     
     def Upscale(self):
         upscale = UpscaleImage(modelPath=self.modelPath,
-                                    modelName=self.modelName)
+                                modelName=self.modelName,
+                                device=self.returnDevice())
         image = self.loadImage(self.inputImage)
         imageTensor = upscale.imageToTensor(image)
         upscaledTensor = upscale.renderImage(imageTensor)
