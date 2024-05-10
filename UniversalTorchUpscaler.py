@@ -223,7 +223,7 @@ class handleApplication:
         
         parser.add_argument('-i', required=True, help='input image path (jpg/png/webp) or directory')
         parser.add_argument('-o', required=True, help='output image path (jpg/png/webp) or directory')
-        parser.add_argument('-t', help='tile size (>=32/0=auto, default=0)',default=0)
+        parser.add_argument('-t', help='tile size (>=32/0=auto, default=0)',default=0,type=int)
         parser.add_argument('-m', help='folder path to the pre-trained models. default=models',default='models')
         parser.add_argument('-n', required=True, help='model name (include extension)')
         parser.add_argument('-c', help='use only CPU for upscaling, instead of cuda. default=auto',action='store_true')
