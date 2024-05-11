@@ -23,11 +23,12 @@ class UpscaleImage:
                  modelPath:str='models',
                  modelName:str='',
                  device="cuda",
-                 tile_pad = 10):
+                 tile_pad = 10,
+                 half = False):
         path = os.path.join(modelPath,modelName)
         self.loadModel(path)
-        self.setDevice(device)
-
+        self.setDevice(device,half)
+        self.half = half
         self.tile_pad = tile_pad
 
     def loadModel(self, modelPath):
@@ -37,11 +38,13 @@ class UpscaleImage:
         self.scale = self.model.scale
         
 
-    def setDevice(self,device):
+    def setDevice(self,device:str = "cuda",half: bool = False):
         if device == "cpu":
             self.model.eval().cpu()
         if device == "cuda":
             self.model.eval().cuda()
+            if half:
+                 self.model.half()
         self.device = device
     
     
@@ -51,8 +54,10 @@ class UpscaleImage:
         transform = transforms.Compose([
             transforms.ToTensor(),  # Convert PIL image to tensor
         ])
-
-        return transform(image).unsqueeze(0).to(self.device)
+        imageTensor = transform(image)
+        if self.half:
+            return imageTensor.unsqueeze(0).to(self.device).half()
+        return imageTensor.unsqueeze(0).to(self.device)
     
     def tensorToImage(self, image: torch.Tensor) -> Image:
         transform = transforms.ToPILImage()
@@ -155,7 +160,8 @@ class handleApplication:
     def Upscale(self):
         upscale = UpscaleImage(modelPath=self.modelPath,
                                 modelName=self.modelName,
-                                device=self.returnDevice())
+                                device=self.returnDevice(),
+                                half=self.half)
         image = self.loadImage(self.inputImage)
         imageTensor = upscale.imageToTensor(image)
         if self.tileSize == 0:
@@ -178,7 +184,8 @@ class handleApplication:
         self.outputDir = self.args.o
         self.isCPU = self.args.c
         self.tileSize = int(self.args.t)
-
+        self.half = self.args.half
+        
         if self.inputImage == self.outputImage:
             raise os.error("Input and output cannot be the same image.")
         if not isDir: # Executed if it is not rendering an image directory
@@ -228,6 +235,7 @@ class handleApplication:
         parser.add_argument('-n', required=True, help='model name (include extension)')
         parser.add_argument('-c', help='use only CPU for upscaling, instead of cuda. default=auto',action='store_true')
         parser.add_argument('-f', help='output image format (jpg/png/webp, default=ext/png)')
+        parser.add_argument('--half', help='half precision, only works with NVIDIA RTX 20 series and above.',action='store_true')
         args = parser.parse_args()
         
         return args
