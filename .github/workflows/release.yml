@@ -46,6 +46,12 @@ jobs:
       - name: build
         run: |
               python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
+
+      - name: compress
+        run: |
+              cd dist/main
+              tar -cf - * | xz -9e > ../../UniversalPytorchUpscalerMacOS.tar.xz *
+              
       
       - name: upload
         uses: actions/upload-artifact@v3
@@ -79,11 +85,14 @@ jobs:
       - name: build
         run: |
               python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
-      
+      - name: compress
+        run: |
+              cd dist/main
+              7z a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m ../../UniversalPytorchUpscalerWindows.7z *
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          path: dist
+          path: UniversalPytorchUpscaler.7z
 
     
 
@@ -113,7 +122,11 @@ jobs:
       - name: build
         run: |
               python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
-      
+      - name: compress
+        run: |
+              cd dist/main
+              tar -cf - * | xz -9e > ../../UniversalPytorchUpscalerLinux.tar.xz *
+              
       - name: upload
         uses: actions/upload-artifact@v3
         with:
