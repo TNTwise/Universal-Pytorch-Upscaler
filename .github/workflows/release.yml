@@ -46,18 +46,18 @@ jobs:
 
       - name: build
         run: |
-              python3 -m PyInstaller  UniversalTorchUpscaler.py
+              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
 
       - name: compress
         run: |
               cd dist
-              tar -cf - UniversalPytorchUpscaler/* | xz -9e > ../UniversalPytorchUpscalerMacOS.tar.xz *
+              tar -cf - * | xz -9e > UniversalPytorchUpscalerMacOS.tar.xz *
               
       
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          path: UniversalPytorchUpscalerMacOS.tar.xz
+          path: dist/UniversalPytorchUpscalerMacOS.tar.xz
 
   windows:
     strategy:
