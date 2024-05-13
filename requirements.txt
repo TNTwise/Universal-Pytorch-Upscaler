@@ -1,5 +1,5 @@
 pillow
-torch>=2.0.1
-torchvision>=0.15.2
-spandrel
+torch>=2.2.0
+torchvision>=0.17
+spandrel>=0.3.3
 pyinstaller
