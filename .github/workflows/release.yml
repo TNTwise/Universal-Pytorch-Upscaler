@@ -126,12 +126,12 @@ jobs:
       - name: compress
         run: |
               cd dist
-              tar -cf - * | xz -9e > ../UniversalPytorchUpscalerLinux.tar.xz *
+              tar -cf - * | gzip -9 > ../UniversalPytorchUpscalerLinux.tar.gz
               
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          path: dist/UniversalPytorchUpscalerLinux.tar.xz
+          path: dist/UniversalPytorchUpscalerLinux.tar.gz
           
   Release:
     needs: [setup, macos, windows, linux]
