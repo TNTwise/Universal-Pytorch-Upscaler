@@ -134,7 +134,7 @@ jobs:
           path: dist/UniversalPytorchUpscalerLinux.tar.gz
           
   Release:
-    needs: [setup, macos, windows, linux]
+    needs: [setup, macos, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
