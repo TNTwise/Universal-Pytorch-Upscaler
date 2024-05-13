@@ -45,7 +45,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
+              python3 -m PyInstaller  UniversalTorchUpscaler.py
 
       - name: compress
         run: |
@@ -84,7 +84,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
+              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel
       - name: compress
         run: |
               ls
@@ -122,7 +122,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py
+              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel
       - name: compress
         run: |
               cd dist
