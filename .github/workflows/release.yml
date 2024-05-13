@@ -53,11 +53,7 @@ jobs:
               cd dist
               tar -cf - * | xz -9e > UniversalPytorchUpscalerMacOS.tar.xz *
               
-      
-      - name: upload
-        uses: actions/upload-artifact@v3
-        with:
-          path: UniversalPytorchUpscalerMacOS.tar.xz
+
 
   windows:
     strategy:
