@@ -41,6 +41,7 @@ jobs:
       - name: install pip dependencies
         run: |
               python3 -m pip install -r requirements.txt
+              
         
 
       - name: build
@@ -80,6 +81,7 @@ jobs:
       - name: install pip dependencies
         run: |
               python3 -m pip install -r requirements.txt
+              python3 -m pip  install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
         
 
       - name: build
@@ -118,7 +120,7 @@ jobs:
       - name: install pip dependencies
         run: |
               python3 -m pip install -r requirements.txt
-        
+              python3 -m pip  install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
       - name: build
         run: |
