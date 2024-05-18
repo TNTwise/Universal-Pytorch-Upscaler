@@ -24,29 +24,41 @@ class UpscaleImage:
                  modelName:str='',
                  device="cuda",
                  tile_pad = 10,
-                 half = False):
-        path = os.path.join(modelPath,modelName)
-        self.loadModel(path)
-        self.setDevice(device,half)
+                 half = False,
+                 bfloat16=False):
         self.half = half
+        self.bfloat16 = bfloat16
         self.tile_pad = tile_pad
+        
+        path = os.path.join(modelPath,modelName)
+        self.setDevice(device)
+        self.loadModel(path,half,bfloat16)
+        
 
-    def loadModel(self, modelPath):
+        
+        
+
+    def setDevice(
+            self,device:str = "cuda",
+             ):
+        self.device = device
+    def loadModel(self,
+                    modelPath: str ,
+                    half: bool = False,
+                    bfloat16: bool = False):
         self.model = ModelLoader().load_from_file(modelPath)
         assert isinstance(self.model, ImageModelDescriptor)
         #get model attributes
         self.scale = self.model.scale
-        
 
-    def setDevice(self,device:str = "cuda",half: bool = False):
-        if device == "cpu":
+        if self.device == "cpu":
             self.model.eval().cpu()
-        if device == "cuda":
+        if self.device == "cuda":
             self.model.eval().cuda()
             if half:
                  self.model.half()
-        self.device = device
-    
+            if bfloat16:
+                 self.model.bfloat16()
     
 
     def imageToTensor(self, image: Image) -> torch.Tensor:
@@ -54,14 +66,19 @@ class UpscaleImage:
         transform = transforms.Compose([
             transforms.ToTensor(),  # Convert PIL image to tensor
         ])
-        imageTensor = transform(image)
+
+        imageTensor = transform(image).unsqueeze(0).to(self.device)
+
         if self.half:
-            return imageTensor.unsqueeze(0).to(self.device).half()
-        return imageTensor.unsqueeze(0).to(self.device)
+            return imageTensor.half()
+        if self.bfloat16:
+            return imageTensor.bfloat16()
+        
+        return imageTensor
     
     def tensorToImage(self, image: torch.Tensor) -> Image:
         transform = transforms.ToPILImage()
-        return transform(image.squeeze(0))
+        return transform(image.squeeze(0).float())
 
     @torch.inference_mode()
     def renderImage(self, image: torch.Tensor) -> torch.Tensor:
@@ -144,8 +161,9 @@ class UpscaleImage:
 class handleApplication:
     def __init__(self):
         self.args = self.handleArguments(sys.argv)
+        self.setArguments()
         self.checkArguments()
-        self.Upscale()
+        self.RenderSingleImage()
     
     def returnDevice(self):
         if not self.isCPU:
@@ -157,11 +175,12 @@ class handleApplication:
     def loadImage(self,image:str) -> Image:
         return Image.open(self.inputImage)
     
-    def Upscale(self):
+    def RenderSingleImage(self):
         upscale = UpscaleImage(modelPath=self.modelPath,
                                 modelName=self.modelName,
                                 device=self.returnDevice(),
-                                half=self.half)
+                                half=self.half,
+                                bfloat16=self.bfloat16)
         image = self.loadImage(self.inputImage)
         imageTensor = upscale.imageToTensor(image)
         if self.tileSize == 0:
@@ -170,10 +189,9 @@ class handleApplication:
             upscaledTensor = upscale.renderTiledImage(imageTensor,self.tileSize)
         upscaledImage = upscale.tensorToImage(upscaledTensor)
         self.saveImage(upscaledImage)
-        
-    def checkArguments(self):
-        
-        isDir = os.path.isdir(self.args.i)
+    
+    def setArguments(self):
+        self.isDir = os.path.isdir(self.args.i)
         
         self.modelPath = self.args.m
         
@@ -185,10 +203,15 @@ class handleApplication:
         self.isCPU = self.args.c
         self.tileSize = int(self.args.t)
         self.half = self.args.half
+        self.bfloat16 = self.args.bfloat16
+
+    def checkArguments(self):
+        
+        
         
         if self.inputImage == self.outputImage:
             raise os.error("Input and output cannot be the same image.")
-        if not isDir: # Executed if it is not rendering an image directory
+        if not self.isDir: # Executed if it is not rendering an image directory
             
             
             
@@ -236,6 +259,7 @@ class handleApplication:
         parser.add_argument('-c', help='use only CPU for upscaling, instead of cuda. default=auto',action='store_true')
         parser.add_argument('-f', help='output image format (jpg/png/webp, default=ext/png)')
         parser.add_argument('--half', help='half precision, only works with NVIDIA RTX 20 series and above.',action='store_true')
+        parser.add_argument('--bfloat16', help='like half precision, but more intesive. This can be used with a wider range of models than half.',action='store_true')
         args = parser.parse_args()
         
         return args
