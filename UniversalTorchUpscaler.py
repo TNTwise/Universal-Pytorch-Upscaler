@@ -194,23 +194,26 @@ class handleApplication:
             half=self.args.half,
             bfloat16=self.args.bfloat16,
         )
-        
+
         imageTensor = upscale.imageToTensor(image)
-        upscaledTensor = (upscale.renderImage(imageTensor) # render image, tile if necessary
-                          if self.args.tilesize == 0 
-                          else upscale.renderTiledImage(imageTensor, self.tileSize)
-                          )
+        upscaledTensor = (
+            upscale.renderImage(imageTensor)  # render image, tile if necessary
+            if self.args.tilesize == 0
+            else upscale.renderTiledImage(imageTensor, self.tileSize)
+        )
         upscaledImage = upscale.tensorToImage(upscaledTensor)
         return upscaledImage
 
     def checkArguments(self):
         assert isinstance(self.args.tilesize, int)
-        assert self.args.tilesize > 31 or self.args.tilesize == 0, "Tile size must be greater than 32 (inclusive), or 0."
+        assert (
+            self.args.tilesize > 31 or self.args.tilesize == 0
+        ), "Tile size must be greater than 32 (inclusive), or 0."
         self.isDir = os.path.isdir(self.args.input)
 
         if self.args.input == self.args.output:
             raise os.error("Input and output cannot be the same image.")
-        
+
         if not self.isDir:  # Executed if it is not rendering an image directory
             if not os.path.isfile(self.args.input):
                 raise os.error("Input File/Directory does not exist.")
@@ -226,13 +229,8 @@ class handleApplication:
                 raise os.error("Output must be a directory if input is a directory.")
 
         if not os.path.exists(os.path.join(self.args.modelPath, self.args.modelName)):
-            error = (
-                f"Model {os.path.join(self.args.modelPath,self.args.modelName)} does not exist."
-            )
+            error = f"Model {os.path.join(self.args.modelPath,self.args.modelName)} does not exist."
             raise os.error(error)
-
-        
-       
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -246,13 +244,23 @@ class handleApplication:
         )
 
         parser.add_argument(
-            "-i", "--input", required=True, help="input image path (jpg/png/webp) or directory"
+            "-i",
+            "--input",
+            required=True,
+            help="input image path (jpg/png/webp) or directory",
         )
         parser.add_argument(
-            "-o", "--output", required=True, help="output image path (jpg/png/webp) or directory"
+            "-o",
+            "--output",
+            required=True,
+            help="output image path (jpg/png/webp) or directory",
         )
         parser.add_argument(
-            "-t", "--tilesize", help="tile size (>=32/0=auto, default=0)", default=0, type=int
+            "-t",
+            "--tilesize",
+            help="tile size (>=32/0=auto, default=0)",
+            default=0,
+            type=int,
         )
         parser.add_argument(
             "-m",
@@ -261,11 +269,8 @@ class handleApplication:
             default="models",
         )
         parser.add_argument(
-                            "-n",
-                            "--modelName",
-                            required=True, 
-                            help="model name (include extension)"
-                            )
+            "-n", "--modelName", required=True, help="model name (include extension)"
+        )
         parser.add_argument(
             "-c",
             "--cpu",
