@@ -9,7 +9,6 @@ import math
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 
 
-
 def is_image(file_path):
     try:
         img = Image.open(file_path)
@@ -17,38 +16,36 @@ def is_image(file_path):
         return True
     except (IOError, SyntaxError):
         return False
-    
+
+
 class UpscaleImage:
-    def __init__(self,
-                 modelPath:str='models',
-                 modelName:str='',
-                 device="cuda",
-                 tile_pad = 10,
-                 half = False,
-                 bfloat16=False):
+    def __init__(
+        self,
+        modelPath: str = "models",
+        modelName: str = "",
+        device="cuda",
+        tile_pad=10,
+        half=False,
+        bfloat16=False,
+    ):
         self.half = half
         self.bfloat16 = bfloat16
         self.tile_pad = tile_pad
-        
-        path = os.path.join(modelPath,modelName)
-        self.setDevice(device)
-        self.loadModel(path,half,bfloat16)
-        
 
-        
-        
+        path = os.path.join(modelPath, modelName)
+        self.setDevice(device)
+        self.loadModel(path, half, bfloat16)
 
     def setDevice(
-            self,device:str = "cuda",
-             ):
+        self,
+        device: str = "cuda",
+    ):
         self.device = device
-    def loadModel(self,
-                    modelPath: str ,
-                    half: bool = False,
-                    bfloat16: bool = False):
+
+    def loadModel(self, modelPath: str, half: bool = False, bfloat16: bool = False):
         self.model = ModelLoader().load_from_file(modelPath)
         assert isinstance(self.model, ImageModelDescriptor)
-        #get model attributes
+        # get model attributes
         self.scale = self.model.scale
 
         if self.device == "cpu":
@@ -56,16 +53,16 @@ class UpscaleImage:
         if self.device == "cuda":
             self.model.eval().cuda()
             if half:
-                 self.model.half()
+                self.model.half()
             if bfloat16:
-                 self.model.bfloat16()
-    
+                self.model.bfloat16()
 
     def imageToTensor(self, image: Image) -> torch.Tensor:
-        
-        transform = transforms.Compose([
-            transforms.ToTensor(),  # Convert PIL image to tensor
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),  # Convert PIL image to tensor
+            ]
+        )
 
         imageTensor = transform(image).unsqueeze(0).to(self.device)
 
@@ -73,9 +70,9 @@ class UpscaleImage:
             return imageTensor.half()
         if self.bfloat16:
             return imageTensor.bfloat16()
-        
+
         return imageTensor
-    
+
     def tensorToImage(self, image: torch.Tensor) -> Image:
         transform = transforms.ToPILImage()
         return transform(image.squeeze(0).float())
@@ -84,16 +81,17 @@ class UpscaleImage:
     def renderImage(self, image: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             return self.model(image)
-    
+
     @torch.inference_mode()
-    def renderImagesInDirectory(self,dir):
+    def renderImagesInDirectory(self, dir):
         pass
-    
+
     def getScale(modelPath):
         return ModelLoader().load_from_file(modelPath).scale
 
-
-    def renderTiledImage(self, image: torch.Tensor, tile_size: int = 32) -> torch.Tensor:
+    def renderTiledImage(
+        self, image: torch.Tensor, tile_size: int = 32
+    ) -> torch.Tensor:
         """It will first crop input images to tiles, and then process each tile.
         Finally, all the processed tiles are merged into one images.
 
@@ -131,13 +129,18 @@ class UpscaleImage:
                 input_tile_width = input_end_x - input_start_x
                 input_tile_height = input_end_y - input_start_y
                 tile_idx = y * tiles_x + x + 1
-                input_tile = image[:, :, input_start_y_pad:input_end_y_pad, input_start_x_pad:input_end_x_pad]
+                input_tile = image[
+                    :,
+                    :,
+                    input_start_y_pad:input_end_y_pad,
+                    input_start_x_pad:input_end_x_pad,
+                ]
 
                 # upscale tile
                 with torch.no_grad():
                     output_tile = self.renderImage(input_tile)
-                
-                print(f'\tTile {tile_idx}/{tiles_x * tiles_y}')
+
+                print(f"\tTile {tile_idx}/{tiles_x * tiles_y}")
 
                 # output tile area on total image
                 output_start_x = input_start_x * self.scale
@@ -152,9 +155,14 @@ class UpscaleImage:
                 output_end_y_tile = output_start_y_tile + input_tile_height * self.scale
 
                 # put tile into output image
-                output[:, :, output_start_y:output_end_y,
-                output_start_x:output_end_x] = output_tile[:, :, output_start_y_tile:output_end_y_tile,
-                                               output_start_x_tile:output_end_x_tile]
+                output[
+                    :, :, output_start_y:output_end_y, output_start_x:output_end_x
+                ] = output_tile[
+                    :,
+                    :,
+                    output_start_y_tile:output_end_y_tile,
+                    output_start_x_tile:output_end_x_tile,
+                ]
         return output
 
 
@@ -164,37 +172,40 @@ class handleApplication:
         self.setArguments()
         self.checkArguments()
         self.RenderSingleImage()
-    
+
     def returnDevice(self):
         if not self.isCPU:
             return "cuda" if torch.cuda.is_available() else "cpu"
         return "cpu"
-    def saveImage(self,image: Image):
+
+    def saveImage(self, image: Image):
         image.save(self.outputImage)
-    
-    def loadImage(self,image:str) -> Image:
+
+    def loadImage(self, image: str) -> Image:
         return Image.open(self.inputImage)
-    
+
     def RenderSingleImage(self):
-        upscale = UpscaleImage(modelPath=self.modelPath,
-                                modelName=self.modelName,
-                                device=self.returnDevice(),
-                                half=self.half,
-                                bfloat16=self.bfloat16)
+        upscale = UpscaleImage(
+            modelPath=self.modelPath,
+            modelName=self.modelName,
+            device=self.returnDevice(),
+            half=self.half,
+            bfloat16=self.bfloat16,
+        )
         image = self.loadImage(self.inputImage)
         imageTensor = upscale.imageToTensor(image)
         if self.tileSize == 0:
             upscaledTensor = upscale.renderImage(imageTensor)
         else:
-            upscaledTensor = upscale.renderTiledImage(imageTensor,self.tileSize)
+            upscaledTensor = upscale.renderTiledImage(imageTensor, self.tileSize)
         upscaledImage = upscale.tensorToImage(upscaledTensor)
         self.saveImage(upscaledImage)
-    
+
     def setArguments(self):
         self.isDir = os.path.isdir(self.args.i)
-        
+
         self.modelPath = self.args.m
-        
+
         self.modelName = self.args.n
         self.inputImage = self.args.i
         self.inputDir = self.args.i
@@ -206,36 +217,28 @@ class handleApplication:
         self.bfloat16 = self.args.bfloat16
 
     def checkArguments(self):
-        
-        
-        
         if self.inputImage == self.outputImage:
             raise os.error("Input and output cannot be the same image.")
-        if not self.isDir: # Executed if it is not rendering an image directory
-            
-            
-            
+        if not self.isDir:  # Executed if it is not rendering an image directory
             if not os.path.isfile(self.inputImage):
-                raise os.error('Input File/Directory does not exist.')
-            
+                raise os.error("Input File/Directory does not exist.")
+
             if not is_image(self.inputImage):
-                raise os.error('Not a valid image File/Directory.')
-            
-            
+                raise os.error("Not a valid image File/Directory.")
+
         else:
-            
-            if len(os.listdir(self.inputDir)) == 0 :
-                raise os.error('Empty Input Directory!')
-            
+            if len(os.listdir(self.inputDir)) == 0:
+                raise os.error("Empty Input Directory!")
+
             if not os.path.isdir(self.outputDir):
-                raise os.error('Output must be a directory if input is a directory.')
-            
-            
-        
-        if not os.path.exists(os.path.join(self.modelPath,self.modelName)):
-            error = f'Model {os.path.join(self.modelPath,self.modelName)} does not exist.'
+                raise os.error("Output must be a directory if input is a directory.")
+
+        if not os.path.exists(os.path.join(self.modelPath, self.modelName)):
+            error = (
+                f"Model {os.path.join(self.modelPath,self.modelName)} does not exist."
+            )
             raise os.error(error)
-            
+
         if type(self.tileSize) == int:
             if self.tileSize < 32 and self.tileSize != 0:
                 raise os.error("Tile size must be greater than or equal to 32.")
@@ -247,24 +250,49 @@ class handleApplication:
 
         Args:
             args (_type_): _description_
-            
+
         """
-        parser = argparse.ArgumentParser(description="Upscale any image, with most torch models, using spandrel.")
-        
-        parser.add_argument('-i', required=True, help='input image path (jpg/png/webp) or directory')
-        parser.add_argument('-o', required=True, help='output image path (jpg/png/webp) or directory')
-        parser.add_argument('-t', help='tile size (>=32/0=auto, default=0)',default=0,type=int)
-        parser.add_argument('-m', help='folder path to the pre-trained models. default=models',default='models')
-        parser.add_argument('-n', required=True, help='model name (include extension)')
-        parser.add_argument('-c', help='use only CPU for upscaling, instead of cuda. default=auto',action='store_true')
-        parser.add_argument('-f', help='output image format (jpg/png/webp, default=ext/png)')
-        parser.add_argument('--half', help='half precision, only works with NVIDIA RTX 20 series and above.',action='store_true')
-        parser.add_argument('--bfloat16', help='like half precision, but more intesive. This can be used with a wider range of models than half.',action='store_true')
+        parser = argparse.ArgumentParser(
+            description="Upscale any image, with most torch models, using spandrel."
+        )
+
+        parser.add_argument(
+            "-i", required=True, help="input image path (jpg/png/webp) or directory"
+        )
+        parser.add_argument(
+            "-o", required=True, help="output image path (jpg/png/webp) or directory"
+        )
+        parser.add_argument(
+            "-t", help="tile size (>=32/0=auto, default=0)", default=0, type=int
+        )
+        parser.add_argument(
+            "-m",
+            help="folder path to the pre-trained models. default=models",
+            default="models",
+        )
+        parser.add_argument("-n", required=True, help="model name (include extension)")
+        parser.add_argument(
+            "-c",
+            help="use only CPU for upscaling, instead of cuda. default=auto",
+            action="store_true",
+        )
+        parser.add_argument(
+            "-f", help="output image format (jpg/png/webp, default=ext/png)"
+        )
+        parser.add_argument(
+            "--half",
+            help="half precision, only works with NVIDIA RTX 20 series and above.",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--bfloat16",
+            help="like half precision, but more intesive. This can be used with a wider range of models than half.",
+            action="store_true",
+        )
         args = parser.parse_args()
-        
+
         return args
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     handleApplication()
