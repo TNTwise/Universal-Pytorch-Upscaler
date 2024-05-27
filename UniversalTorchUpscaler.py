@@ -1,4 +1,4 @@
-from spandrel import ImageModelDescriptor, MAIN_REGISTRY, ModelLoader
+from spandrel import ImageModelDescriptor, ModelLoader
 import sys
 import torch
 import argparse
@@ -168,84 +168,73 @@ class UpscaleImage:
 
 class handleApplication:
     def __init__(self):
-        self.args = self.handleArguments(sys.argv)
-        self.setArguments()
+        self.handleArguments()
         self.checkArguments()
-        self.RenderSingleImage()
+
+        image = self.loadImage(self.args.input)
+        upscaledImage = self.RenderSingleImage(image=image)
+        self.saveImage(upscaledImage)
 
     def returnDevice(self):
-        if not self.isCPU:
+        if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
         return "cpu"
 
     def saveImage(self, image: Image):
-        image.save(self.outputImage)
+        image.save(self.args.output)
 
     def loadImage(self, image: str) -> Image:
-        return Image.open(self.inputImage)
+        return Image.open(image)
 
-    def RenderSingleImage(self):
+    def RenderSingleImage(self, image: Image) -> Image:
         upscale = UpscaleImage(
-            modelPath=self.modelPath,
-            modelName=self.modelName,
+            modelPath=self.args.modelPath,
+            modelName=self.args.modelName,
             device=self.returnDevice(),
-            half=self.half,
-            bfloat16=self.bfloat16,
+            half=self.args.half,
+            bfloat16=self.args.bfloat16,
         )
-        image = self.loadImage(self.inputImage)
+        
         imageTensor = upscale.imageToTensor(image)
-        if self.tileSize == 0:
-            upscaledTensor = upscale.renderImage(imageTensor)
-        else:
-            upscaledTensor = upscale.renderTiledImage(imageTensor, self.tileSize)
+        upscaledTensor = (upscale.renderImage(imageTensor) # render image, tile if necessary
+                          if self.args.tilesize == 0 
+                          else upscale.renderTiledImage(imageTensor, self.tileSize)
+                          )
         upscaledImage = upscale.tensorToImage(upscaledTensor)
-        self.saveImage(upscaledImage)
-
-    def setArguments(self):
-        self.isDir = os.path.isdir(self.args.i)
-
-        self.modelPath = self.args.m
-
-        self.modelName = self.args.n
-        self.inputImage = self.args.i
-        self.inputDir = self.args.i
-        self.outputImage = self.args.o
-        self.outputDir = self.args.o
-        self.isCPU = self.args.c
-        self.tileSize = int(self.args.t)
-        self.half = self.args.half
-        self.bfloat16 = self.args.bfloat16
+        return upscaledImage
 
     def checkArguments(self):
-        if self.inputImage == self.outputImage:
+        assert isinstance(self.args.tilesize, int)
+        assert self.args.tilesize > 31 or self.args.tilesize == 0, "Tile size must be greater than 32 (inclusive), or 0."
+        self.isDir = os.path.isdir(self.args.input)
+
+        if self.args.input == self.args.output:
             raise os.error("Input and output cannot be the same image.")
+        
         if not self.isDir:  # Executed if it is not rendering an image directory
-            if not os.path.isfile(self.inputImage):
+            if not os.path.isfile(self.args.input):
                 raise os.error("Input File/Directory does not exist.")
 
-            if not is_image(self.inputImage):
+            if not is_image(self.args.input):
                 raise os.error("Not a valid image File/Directory.")
 
         else:
-            if len(os.listdir(self.inputDir)) == 0:
+            if len(os.listdir(self.args.input)) == 0:
                 raise os.error("Empty Input Directory!")
 
-            if not os.path.isdir(self.outputDir):
+            if not os.path.isdir(self.args.output):
                 raise os.error("Output must be a directory if input is a directory.")
 
-        if not os.path.exists(os.path.join(self.modelPath, self.modelName)):
+        if not os.path.exists(os.path.join(self.args.modelPath, self.args.modelName)):
             error = (
-                f"Model {os.path.join(self.modelPath,self.modelName)} does not exist."
+                f"Model {os.path.join(self.args.modelPath,self.args.modelName)} does not exist."
             )
             raise os.error(error)
 
-        if type(self.tileSize) == int:
-            if self.tileSize < 32 and self.tileSize != 0:
-                raise os.error("Tile size must be greater than or equal to 32.")
-        else:
-            raise os.error("Tile size must be integer.")
+        
+       
 
-    def handleArguments(self, args: list) -> argparse.ArgumentParser:
+    def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
 
         Args:
@@ -257,22 +246,29 @@ class handleApplication:
         )
 
         parser.add_argument(
-            "-i", required=True, help="input image path (jpg/png/webp) or directory"
+            "-i", "--input", required=True, help="input image path (jpg/png/webp) or directory"
         )
         parser.add_argument(
-            "-o", required=True, help="output image path (jpg/png/webp) or directory"
+            "-o", "--output", required=True, help="output image path (jpg/png/webp) or directory"
         )
         parser.add_argument(
-            "-t", help="tile size (>=32/0=auto, default=0)", default=0, type=int
+            "-t", "--tilesize", help="tile size (>=32/0=auto, default=0)", default=0, type=int
         )
         parser.add_argument(
             "-m",
+            "--modelPath",
             help="folder path to the pre-trained models. default=models",
             default="models",
         )
-        parser.add_argument("-n", required=True, help="model name (include extension)")
+        parser.add_argument(
+                            "-n",
+                            "--modelName",
+                            required=True, 
+                            help="model name (include extension)"
+                            )
         parser.add_argument(
             "-c",
+            "--cpu",
             help="use only CPU for upscaling, instead of cuda. default=auto",
             action="store_true",
         )
@@ -289,9 +285,8 @@ class handleApplication:
             help="like half precision, but more intesive. This can be used with a wider range of models than half.",
             action="store_true",
         )
-        args = parser.parse_args()
 
-        return args
+        self.args = parser.parse_args()
 
 
 if __name__ == "__main__":
