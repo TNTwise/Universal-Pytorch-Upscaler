@@ -6,6 +6,9 @@ import os
 from torchvision import transforms
 from PIL import Image
 import math
+import onnx
+import onnxruntime
+
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 
 
@@ -17,6 +20,21 @@ def is_image(file_path):
     except (IOError, SyntaxError):
         return False
 
+def loadModelWithScale(modelPath: str, half: bool = False, bfloat16: bool = False, device: str = "cuda"):
+        model = ModelLoader().load_from_file(modelPath)
+        assert isinstance(model, ImageModelDescriptor)
+        # get model attributes
+        scale = model.scale
+
+        if device == "cpu":
+            model.eval().cpu()
+        if device == "cuda":
+            model.eval().cuda()
+            if half:
+                model.half()
+            if bfloat16:
+                model.bfloat16()
+        return model, scale
 
 class UpscaleImage:
     def __init__(
@@ -34,7 +52,7 @@ class UpscaleImage:
 
         path = os.path.join(modelPath, modelName)
         self.setDevice(device)
-        self.loadModel(path, half, bfloat16)
+        self.model, self.scale = loadModelWithScale(path, half, bfloat16, device)
 
     def setDevice(
         self,
@@ -42,20 +60,7 @@ class UpscaleImage:
     ):
         self.device = device
 
-    def loadModel(self, modelPath: str, half: bool = False, bfloat16: bool = False):
-        self.model = ModelLoader().load_from_file(modelPath)
-        assert isinstance(self.model, ImageModelDescriptor)
-        # get model attributes
-        self.scale = self.model.scale
-
-        if self.device == "cpu":
-            self.model.eval().cpu()
-        if self.device == "cuda":
-            self.model.eval().cuda()
-            if half:
-                self.model.half()
-            if bfloat16:
-                self.model.bfloat16()
+    
 
     def imageToTensor(self, image: Image) -> torch.Tensor:
         transform = transforms.Compose(
@@ -165,8 +170,65 @@ class UpscaleImage:
                 ]
         return output
 
+class ConvertModels:
+    def __init__(
+            self,
+            pathToModel:str,
+            inputFormat:str = "pytorch",
+            outputFormat:str = "onnx",
+            ncnnConversionMethod:str = "onnx",
+            device:str = "cpu",
+            half:bool = False,
+            bfloat16:bool = False,
+            opset:int = 18,
+    ):
+        
+        self.pathToModel = pathToModel
+        self.inputFormat = inputFormat
+        self.outputFormat = outputFormat
+        self.ncnnConversionMethod = ncnnConversionMethod
+        self.device = device
+        self.opset = opset
+        self.half = half
+        self.bfloat16 = bfloat16
+        
+        
+    def convertModel(self):
+        self.input = self.handleInput()
+        # load model
+        self.model, scale = loadModelWithScale(
+            self.pathToModel,
+            self.half,
+            self.bfloat16,
+            self.device
+            
+        )
+        if self.outputFormat == 'onnx':
+            self.convertPyTorchToONNX()
+    def handleInput(self):
+        x = torch.rand(1,3,256,256)
+        if self.half:
+            return x.half()
+        if self.bfloat16:
+            return x.bfloat16()
+        
+    def convertPyTorchToONNX(self):
+        torch.onnx.export(
+            self.model,
+            f'{self.pathToModel}_op{self.opset}_half{self.half}_bfloat16{self.bfloat16}.onnx',
+            opset_version=self.opset,
+            input=self.input,
+            input_names=["input"],
+            output_names=["output"],
+            do_constant_folding=True
+            
+        )
 
-class handleApplication:
+    def convertPytorchToNCNN(self):
+        pass
+
+
+class HandleApplication:
     def __init__(self):
         self.handleArguments()
         self.checkArguments()
@@ -178,7 +240,6 @@ class handleApplication:
     def returnDevice(self):
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
-        return "cpu"
 
     def saveImage(self, image: Image):
         image.save(self.args.output)
@@ -213,7 +274,11 @@ class handleApplication:
 
         if self.args.input == self.args.output:
             raise os.error("Input and output cannot be the same image.")
-
+        
+        if not os.path.exists(os.path.join(self.args.modelPath, self.args.modelName)):
+            error = f"Model {os.path.join(self.args.modelPath,self.args.modelName)} does not exist."
+            raise os.error(error)
+        
         if not self.isDir:  # Executed if it is not rendering an image directory
             if not os.path.isfile(self.args.input):
                 raise os.error("Input File/Directory does not exist.")
@@ -228,9 +293,7 @@ class handleApplication:
             if not os.path.isdir(self.args.output):
                 raise os.error("Output must be a directory if input is a directory.")
 
-        if not os.path.exists(os.path.join(self.args.modelPath, self.args.modelName)):
-            error = f"Model {os.path.join(self.args.modelPath,self.args.modelName)} does not exist."
-            raise os.error(error)
+        
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -295,4 +358,4 @@ class handleApplication:
 
 
 if __name__ == "__main__":
-    handleApplication()
+    HandleApplication()
