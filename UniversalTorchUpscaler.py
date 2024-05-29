@@ -20,21 +20,25 @@ def is_image(file_path):
     except (IOError, SyntaxError):
         return False
 
-def loadModelWithScale(modelPath: str, half: bool = False, bfloat16: bool = False, device: str = "cuda"):
-        model = ModelLoader().load_from_file(modelPath)
-        assert isinstance(model, ImageModelDescriptor)
-        # get model attributes
-        scale = model.scale
 
-        if device == "cpu":
-            model.eval().cpu()
-        if device == "cuda":
-            model.eval().cuda()
-            if half:
-                model.half()
-            if bfloat16:
-                model.bfloat16()
-        return model, scale
+def loadModelWithScale(
+    modelPath: str, half: bool = False, bfloat16: bool = False, device: str = "cuda"
+):
+    model = ModelLoader().load_from_file(modelPath)
+    assert isinstance(model, ImageModelDescriptor)
+    # get model attributes
+    scale = model.scale
+
+    if device == "cpu":
+        model.eval().cpu()
+    if device == "cuda":
+        model.eval().cuda()
+        if half:
+            model.half()
+        if bfloat16:
+            model.bfloat16()
+    return model, scale
+
 
 class UpscaleImage:
     def __init__(
@@ -59,8 +63,6 @@ class UpscaleImage:
         device: str = "cuda",
     ):
         self.device = device
-
-    
 
     def imageToTensor(self, image: Image) -> torch.Tensor:
         transform = transforms.Compose(
@@ -170,19 +172,22 @@ class UpscaleImage:
                 ]
         return output
 
+
 class ConvertModels:
     def __init__(
-            self,
-            pathToModel:str,
-            inputFormat:str = "pytorch",
-            outputFormat:str = "onnx",
-            ncnnConversionMethod:str = "onnx",
-            device:str = "cpu",
-            half:bool = False,
-            bfloat16:bool = False,
-            opset:int = 18,
+        self,
+        modelName: str,
+        pathToModel: str,
+        inputFormat: str = "pytorch",
+        outputFormat: str = "onnx",
+        ncnnConversionMethod: str = "onnx",
+        device: str = "cpu",
+        half: bool = False,
+        bfloat16: bool = False,
+        opset: int = 18,
+        onnxDynamicAxess: dict = None,
     ):
-        
+        self.modelName = modelName
         self.pathToModel = pathToModel
         self.inputFormat = inputFormat
         self.outputFormat = outputFormat
@@ -191,38 +196,51 @@ class ConvertModels:
         self.opset = opset
         self.half = half
         self.bfloat16 = bfloat16
-        
-        
+        self.onnxDynamicAxes = onnxDynamicAxess
+
     def convertModel(self):
         self.input = self.handleInput()
         # load model
         self.model, scale = loadModelWithScale(
-            self.pathToModel,
-            self.half,
-            self.bfloat16,
-            self.device
-            
+            self.pathToModel, self.half, self.bfloat16, self.device
         )
-        if self.outputFormat == 'onnx':
+        if self.outputFormat == "onnx":
             self.convertPyTorchToONNX()
+
     def handleInput(self):
-        x = torch.rand(1,3,256,256)
+        x = torch.rand(1, 3, 256, 256)
         if self.half:
-            return x.half()
+            x = x.half()
         if self.bfloat16:
-            return x.bfloat16()
-        
+            x = x.bfloat16()
+        if self.device == "cuda":
+            x = x.cuda()
+        return x
+
+    def generateONNXOutputName(self) -> str:
+        if self.half:
+            return f"{self.modelName}_op{self.opset}_half.onnx"
+        if self.bfloat16:
+            return f"{self.modelName}_op{self.opset}_bfloat16.onnx"
+        return f"{self.modelName}_op{self.opset}.onnx"
+
     def convertPyTorchToONNX(self):
-        torch.onnx.export(
-            self.model,
-            f'{self.pathToModel}_op{self.opset}_half{self.half}_bfloat16{self.bfloat16}.onnx',
-            opset_version=self.opset,
-            input=self.input,
-            input_names=["input"],
-            output_names=["output"],
-            do_constant_folding=True
-            
-        )
+        model = self.model.model
+        state_dict = model.state_dict()
+        model.eval()
+        model.load_state_dict(state_dict, strict=True)
+        with torch.inference_mode():
+            torch.onnx.export(
+                model,
+                self.input,
+                self.generateONNXOutputName(),
+                opset_version=self.opset,
+                verbose=False,
+                input_names=["input"],
+                output_names=["output"],
+                do_constant_folding=True,
+                dynamic_axes=self.onnxDynamicAxes,
+            )
 
     def convertPytorchToNCNN(self):
         pass
@@ -230,12 +248,12 @@ class ConvertModels:
 
 class HandleApplication:
     def __init__(self):
-        self.handleArguments()
+        self.args = self.handleArguments()
         self.checkArguments()
-
-        image = self.loadImage(self.args.input)
-        upscaledImage = self.RenderSingleImage(image=image)
-        self.saveImage(upscaledImage)
+        if self.args.export == None:
+            self.RenderSingleImage(self.args.input)
+        elif self.args.export.lower().strip() == "onnx":
+            self.exportModelAsONNX()
 
     def returnDevice(self):
         if not self.args.cpu:
@@ -247,7 +265,21 @@ class HandleApplication:
     def loadImage(self, image: str) -> Image:
         return Image.open(image)
 
+    def exportModelAsONNX(self):
+        x = ConvertModels(
+            modelName=self.args.modelName,
+            pathToModel=self.fullModelPathandName(),
+            inputFormat="pytorch",
+            outputFormat="onnx",
+            device=self.returnDevice(),
+            half=self.args.half,
+            bfloat16=self.args.bfloat16,
+            opset=17,
+        )
+        x.convertModel()
+
     def RenderSingleImage(self, image: Image) -> Image:
+        image = self.loadImage(image)
         upscale = UpscaleImage(
             modelPath=self.args.modelPath,
             modelName=self.args.modelName,
@@ -263,37 +295,7 @@ class HandleApplication:
             else upscale.renderTiledImage(imageTensor, self.tileSize)
         )
         upscaledImage = upscale.tensorToImage(upscaledTensor)
-        return upscaledImage
-
-    def checkArguments(self):
-        assert isinstance(self.args.tilesize, int)
-        assert (
-            self.args.tilesize > 31 or self.args.tilesize == 0
-        ), "Tile size must be greater than 32 (inclusive), or 0."
-        self.isDir = os.path.isdir(self.args.input)
-
-        if self.args.input == self.args.output:
-            raise os.error("Input and output cannot be the same image.")
-        
-        if not os.path.exists(os.path.join(self.args.modelPath, self.args.modelName)):
-            error = f"Model {os.path.join(self.args.modelPath,self.args.modelName)} does not exist."
-            raise os.error(error)
-        
-        if not self.isDir:  # Executed if it is not rendering an image directory
-            if not os.path.isfile(self.args.input):
-                raise os.error("Input File/Directory does not exist.")
-
-            if not is_image(self.args.input):
-                raise os.error("Not a valid image File/Directory.")
-
-        else:
-            if len(os.listdir(self.args.input)) == 0:
-                raise os.error("Empty Input Directory!")
-
-            if not os.path.isdir(self.args.output):
-                raise os.error("Output must be a directory if input is a directory.")
-
-        
+        self.saveImage(upscaledImage)
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -309,13 +311,13 @@ class HandleApplication:
         parser.add_argument(
             "-i",
             "--input",
-            required=True,
+            default=None,
             help="input image path (jpg/png/webp) or directory",
         )
         parser.add_argument(
             "-o",
             "--output",
-            required=True,
+            default=None,
             help="output image path (jpg/png/webp) or directory",
         )
         parser.add_argument(
@@ -354,7 +356,56 @@ class HandleApplication:
             action="store_true",
         )
 
-        self.args = parser.parse_args()
+        parser.add_argument(
+            "-e",
+            "--export",
+            help="Export PyTorch models to ONNX and NCNN. Options: (onnx/ncnn)",
+            default=None,
+        )
+        return parser.parse_args()
+
+    def fullModelPathandName(self):
+        return os.path.join(self.args.modelPath, self.args.modelName)
+
+    def checkArguments(self):
+        assert isinstance(self.args.tilesize, int)
+        assert (
+            self.args.tilesize > 31 or self.args.tilesize == 0
+        ), "Tile size must be greater than 32 (inclusive), or 0."
+
+        if self.args.export == None:
+            if self.args.input == None:
+                raise os.error("Tried to upscale without Input Image!")
+            if self.args.output == None:
+                raise os.error("Tried to upscale without Output Image!")
+
+            self.isDir = os.path.isdir(self.args.input)
+
+            if self.args.input == self.args.output:
+                raise os.error("Input and output cannot be the same image.")
+
+            if not os.path.exists(self.fullModelPathandName()):
+                error = f"Model {self.fullModelPathandName()} does not exist."
+                raise os.error(error)
+
+            if not self.isDir:  # Executed if it is not rendering an image directory
+                if not os.path.isfile(self.args.input):
+                    raise os.error("Input File/Directory does not exist.")
+
+                if not is_image(self.args.input):
+                    raise os.error("Not a valid image File/Directory.")
+
+            else:
+                if len(os.listdir(self.args.input)) == 0:
+                    raise os.error("Empty Input Directory!")
+
+                if not os.path.isdir(self.args.output):
+                    raise os.error(
+                        "Output must be a directory if input is a directory."
+                    )
+
+        if self.args.half and self.args.bfloat16:
+            raise os.error("Cannot use half and bfloat16 at the same time!")
 
 
 if __name__ == "__main__":
