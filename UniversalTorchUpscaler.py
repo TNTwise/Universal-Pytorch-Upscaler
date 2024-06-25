@@ -8,7 +8,7 @@ from PIL import Image
 import math
 import onnx
 import onnxruntime
-
+import pnnx
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 
 
@@ -71,7 +71,11 @@ class UpscaleImage:
             ]
         )
 
-        imageTensor = transform(image).unsqueeze(0).to(self.device)
+        imageTensor = (
+            transform(image)
+            .unsqueeze(0)
+            .to(self.device)
+        )
 
         if self.half:
             return imageTensor.half()
@@ -93,8 +97,8 @@ class UpscaleImage:
     def renderImagesInDirectory(self, dir):
         pass
 
-    def getScale(modelPath):
-        return ModelLoader().load_from_file(modelPath).scale
+    def getScale(self, modelPath: str):
+        return self.scale
 
     def renderTiledImage(
         self, image: torch.Tensor, tile_size: int = 32
@@ -189,6 +193,7 @@ class ConvertModels:
     ):
         self.modelName = modelName
         self.pathToModel = pathToModel
+        self.basepath = os.path.dirname(pathToModel)
         self.inputFormat = inputFormat
         self.outputFormat = outputFormat
         self.ncnnConversionMethod = ncnnConversionMethod
@@ -206,7 +211,8 @@ class ConvertModels:
         )
         if self.outputFormat == "onnx":
             self.convertPyTorchToONNX()
-
+        if self.outputFormat == "ncnn":
+            self.convertPytorchToNCNN()
     def handleInput(self):
         x = torch.rand(1, 3, 256, 256)
         if self.half:
@@ -241,9 +247,27 @@ class ConvertModels:
                 do_constant_folding=True,
                 dynamic_axes=self.onnxDynamicAxes,
             )
-
     def convertPytorchToNCNN(self):
-        pass
+        model = self.model.model
+        input = torch.rand(1,3,256,256)
+        jitTracedModelLocation = self.pathToModel+'.pt'
+        jitTracedModel = torch.jit.trace(model,input)
+        jitTracedModel.save(jitTracedModelLocation)
+        model = pnnx.convert(
+            ptpath=jitTracedModelLocation,
+            inputs=input,
+        )
+        #remove stuff that we dont need
+        os.remove(jitTracedModelLocation)
+        os.remove(self.pathToModel +'.pnnx.bin')
+        os.remove(self.pathToModel +'.pnnx.param')
+        os.remove(self.pathToModel +'_pnnx.py')
+        os.remove(self.pathToModel +'_ncnn.py')
+        os.remove(self.pathToModel +'.pnnx.onnx')
+        os.remove(os.path.join(self.basepath, 'debug.bin'))
+        os.remove(os.path.join(self.basepath, 'debug.param'))
+        os.remove(os.path.join(self.basepath, 'debug2.bin'))
+        os.remove(os.path.join(self.basepath, 'debug2.param'))
 
 
 class HandleApplication:
@@ -254,7 +278,8 @@ class HandleApplication:
             self.RenderSingleImage(self.args.input)
         elif self.args.export.lower().strip() == "onnx":
             self.exportModelAsONNX()
-
+        elif self.args.export.lower().strip() == "ncnn":
+            self.exportModelAsNCNN()
     def returnDevice(self):
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
@@ -265,6 +290,17 @@ class HandleApplication:
     def loadImage(self, image: str) -> Image:
         return Image.open(image)
 
+    def exportModelAsNCNN(self):
+        x = ConvertModels(
+            modelName=self.args.modelName,
+            pathToModel=self.fullModelPathandName(),
+            inputFormat="pytorch",
+            outputFormat="ncnn",
+            device="cpu",
+            half=True,
+            bfloat16=False
+        )
+        x.convertModel()
     def exportModelAsONNX(self):
         x = ConvertModels(
             modelName=self.args.modelName,
