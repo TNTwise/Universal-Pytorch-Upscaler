@@ -257,6 +257,7 @@ class ConvertModels:
             ptpath=jitTracedModelLocation,
             inputs=input,
         )
+
         #remove stuff that we dont need
         os.remove(jitTracedModelLocation)
         os.remove(self.pathToModel +'.pnnx.bin')
