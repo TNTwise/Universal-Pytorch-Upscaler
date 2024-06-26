@@ -247,6 +247,15 @@ class ConvertModels:
                 do_constant_folding=True,
                 dynamic_axes=self.onnxDynamicAxes,
             )
+    def fixNCNNParamInput(self):
+        newParamFile = []
+        with open(self.pathToModel + '.ncnn.param', 'r') as f:
+            for line in f.readlines():
+                line = line.replace('in0','data')
+                line = line.replace('out0','output')
+                newParamFile.append(line)
+        with open(self.pathToModel + '.ncnn.param', 'w') as f:
+            f.writelines(newParamFile)
 
     def convertPytorchToNCNN(self):
         model = self.model.model
@@ -257,6 +266,7 @@ class ConvertModels:
         model = pnnx.convert(
             ptpath=jitTracedModelLocation,
             inputs=input,
+            
         )
 
         #remove stuff that we dont need
@@ -276,6 +286,8 @@ class ConvertModels:
             os.remove(os.path.join(cwd, 'debug2.param'))
         except:
             print("Failed to remove debug pnnx files.")
+        
+        self.fixNCNNParamInput()
 
 class HandleApplication:
     def __init__(self):
