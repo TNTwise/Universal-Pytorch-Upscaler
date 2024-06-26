@@ -9,6 +9,7 @@ import math
 import onnx
 import onnxruntime
 import pnnx
+from io import BytesIO
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 cwd = os.getcwd()
 
@@ -247,36 +248,59 @@ class ConvertModels:
                 do_constant_folding=True,
                 dynamic_axes=self.onnxDynamicAxes,
             )
-    def fixNCNNParamInput(self):
+    def fixNCNNParamInput(self,paramFile):
+        """
+        replaces in0 with data and out0 with output in a ncnn param file
+        """
         newParamFile = []
-        with open(self.pathToModel + '.ncnn.param', 'r') as f:
+        with open(paramFile, 'r') as f:
             for line in f.readlines():
                 line = line.replace('in0','data')
                 line = line.replace('out0','output')
                 newParamFile.append(line)
-        with open(self.pathToModel + '.ncnn.param', 'w') as f:
+        with open(paramFile, 'w') as f:
             f.writelines(newParamFile)
 
     def convertPytorchToNCNN(self):
+        """
+        Takes in a pytorch model, and uses JIT tracing with PNNX to convert it to end.
+        This method removed unnecessary files, and fixes the param file to be compadible with most NCNN appliacitons.
+        """
         model = self.model.model
+        model.eval()
         input = torch.rand(1,3,256,256)
         jitTracedModelLocation = self.pathToModel+'.pt'
         jitTracedModel = torch.jit.trace(model,input)
         jitTracedModel.save(jitTracedModelLocation)
+
+        pnnxBinLocation = self.pathToModel +'.pnnx.bin'
+        pnnxParamLocation = self.pathToModel +'.pnnx.param'
+        pnnxPythonLocation = self.pathToModel +'_pnnx.py'
+        pnnxOnnxLocation = self.pathToModel +'.pnnx.onnx'
+        ncnnPythonLocation = self.pathToModel +'_ncnn.py'
+        ncnnParamLocation = self.pathToModel + '.ncnn.param'
+
         model = pnnx.convert(
             ptpath=jitTracedModelLocation,
             inputs=input,
-            
+            device=self.device,
+            optlevel=2,
+            fp16=True,
+            pnnxbin=pnnxBinLocation,
+            pnnxparam=pnnxParamLocation,
+            pnnxpy=pnnxPythonLocation,
+            pnnxonnx=pnnxOnnxLocation,
+            ncnnpy=ncnnPythonLocation,
         )
 
         #remove stuff that we dont need
         try:
             os.remove(jitTracedModelLocation)
-            os.remove(self.pathToModel +'.pnnx.bin')
-            os.remove(self.pathToModel +'.pnnx.param')
-            os.remove(self.pathToModel +'_pnnx.py')
-            os.remove(self.pathToModel +'_ncnn.py')
-            os.remove(self.pathToModel +'.pnnx.onnx')
+            os.remove(pnnxBinLocation)
+            os.remove(pnnxParamLocation)
+            os.remove(pnnxPythonLocation)
+            os.remove(pnnxOnnxLocation)
+            os.remove(ncnnPythonLocation)
         except:
             print("Could not remove unnecessary files.")
         try:
@@ -287,7 +311,7 @@ class ConvertModels:
         except:
             print("Failed to remove debug pnnx files.")
         
-        self.fixNCNNParamInput()
+        self.fixNCNNParamInput(ncnnParamLocation)
 
 class HandleApplication:
     def __init__(self):
