@@ -10,7 +10,7 @@ import onnx
 import onnxruntime
 import pnnx
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
-
+cwd = os.getcwd()
 
 def is_image(file_path):
     try:
@@ -266,11 +266,13 @@ class ConvertModels:
         os.remove(self.pathToModel +'_pnnx.py')
         os.remove(self.pathToModel +'_ncnn.py')
         os.remove(self.pathToModel +'.pnnx.onnx')
-        os.remove(os.path.join(self.basepath, 'debug.bin'))
-        os.remove(os.path.join(self.basepath, 'debug.param'))
-        os.remove(os.path.join(self.basepath, 'debug2.bin'))
-        os.remove(os.path.join(self.basepath, 'debug2.param'))
-
+        try:
+            os.remove(os.path.join(cwd, 'debug.bin'))
+            os.remove(os.path.join(cwd, 'debug.param'))
+            os.remove(os.path.join(cwd, 'debug2.bin'))
+            os.remove(os.path.join(cwd, 'debug2.param'))
+        except:
+            print("Failed to remove debug pnnx files.")
 
 class HandleApplication:
     def __init__(self):
