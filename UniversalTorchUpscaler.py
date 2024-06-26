@@ -247,6 +247,7 @@ class ConvertModels:
                 do_constant_folding=True,
                 dynamic_axes=self.onnxDynamicAxes,
             )
+
     def convertPytorchToNCNN(self):
         model = self.model.model
         input = torch.rand(1,3,256,256)
@@ -258,14 +259,16 @@ class ConvertModels:
             inputs=input,
         )
 
-
         #remove stuff that we dont need
-        os.remove(jitTracedModelLocation)
-        os.remove(self.pathToModel +'.pnnx.bin')
-        os.remove(self.pathToModel +'.pnnx.param')
-        os.remove(self.pathToModel +'_pnnx.py')
-        os.remove(self.pathToModel +'_ncnn.py')
-        os.remove(self.pathToModel +'.pnnx.onnx')
+        try:
+            os.remove(jitTracedModelLocation)
+            os.remove(self.pathToModel +'.pnnx.bin')
+            os.remove(self.pathToModel +'.pnnx.param')
+            os.remove(self.pathToModel +'_pnnx.py')
+            os.remove(self.pathToModel +'_ncnn.py')
+            os.remove(self.pathToModel +'.pnnx.onnx')
+        except:
+            print("Could not remove unnecessary files.")
         try:
             os.remove(os.path.join(cwd, 'debug.bin'))
             os.remove(os.path.join(cwd, 'debug.param'))
