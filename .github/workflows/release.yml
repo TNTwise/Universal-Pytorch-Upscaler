@@ -82,7 +82,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel
+              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel,pnnx,onnx
       - name: compress
         run: |
               ls
