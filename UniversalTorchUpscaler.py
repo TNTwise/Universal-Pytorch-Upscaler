@@ -137,7 +137,7 @@ class HandleApplication:
             action="store_true",
         )
         parser.add_argument(
-            "-f", help="output image format (jpg/png/webp, default=ext/png)"
+            "-f","--format", help="output image format (jpg/png/webp, default=ext/png)"
         )
         parser.add_argument(
             "--half",

@@ -7,5 +7,5 @@ pyinstaller
 onnx
 onnxruntime
 pnnx
-ncnn
+ncnn-vulkan
 opencv-python

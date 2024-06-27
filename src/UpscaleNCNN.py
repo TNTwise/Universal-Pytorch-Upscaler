@@ -9,10 +9,12 @@ class UpscaleNCNNImage:
                 self,
                 modelPath: str = "models",
                 modelName: str = "",
+                vulkan: bool = True,
                 tile_pad=10,
                 ):
         self.modelPath = modelPath
         self.modelName = modelName
+        self.vulkan = vulkan
         self.fullModelPath = os.path.join(self.modelPath, self.modelName)
     def renderImage(self, fullImagePath) -> np.array:
 
@@ -20,7 +22,7 @@ class UpscaleNCNNImage:
         net = ncnn.Net()
 
         # Use vulkan compute
-        net.opt.use_vulkan_compute = True
+        net.opt.use_vulkan_compute = self.vulkan
 
         # Load model param and bin
         net.load_param(self.fullModelPath + ".param")
