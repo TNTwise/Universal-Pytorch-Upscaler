@@ -69,8 +69,8 @@ class UpscalePytorchImage:
     def getScale(self):
         return self.scale
 
-    def saveImage(self, image: Image):
-        image.save(self.args.output)
+    def saveImage(self, image: Image, fullOutputPathLocation):
+        image.save(fullOutputPathLocation)
 
     def renderTiledImage(
         self, image: torch.Tensor, tile_size: int = 32

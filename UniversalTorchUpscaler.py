@@ -5,10 +5,10 @@ from PIL import Image
 import onnx
 
 
-from .Util import is_image
-from .UpscaleTorch import UpscalePytorchImage
-from .UpscaleNCNN import UpscaleNCNNImage
-from .ConvertModels import ConvertModels
+from src.Util import is_image
+from src.UpscaleTorch import UpscalePytorchImage
+from src.UpscaleNCNN import UpscaleNCNNImage
+from src.ConvertModels import ConvertModels
 
 
 class HandleApplication:
@@ -75,7 +75,7 @@ class HandleApplication:
             else upscale.renderTiledImage(imageTensor, self.args.tilesize)
         )
         upscaledImage = upscale.tensorToImage(upscaledTensor)
-        upscale.saveImage(upscaledImage)
+        upscale.saveImage(upscaledImage, self.args.output)
 
     def ncnnRenderSingleImage(self, imagePath: str):
         upscale = UpscaleNCNNImage(
@@ -83,7 +83,7 @@ class HandleApplication:
             modelName=self.args.modelName,
         )
         upscaledImage = upscale.renderImage(fullImagePath=imagePath)
-        upscale.saveImage(upscaledImage)
+        upscale.saveImage(upscaledImage,self.args.output)
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -166,6 +166,8 @@ class HandleApplication:
         assert (
             self.args.tilesize > 31 or self.args.tilesize == 0
         ), "Tile size must be greater than 32 (inclusive), or 0."
+        # put error messages here
+        modelNotFoundError = f"Model {self.fullModelPathandName()} does not exist."
 
         if self.args.export == None:
             if self.args.input == None:
@@ -177,11 +179,17 @@ class HandleApplication:
 
             if self.args.input == self.args.output:
                 raise os.error("Input and output cannot be the same image.")
-
-            if not os.path.exists(self.fullModelPathandName()):
-                error = f"Model {self.fullModelPathandName()} does not exist."
-                raise os.error(error)
-
+            
+            # checks for pytorch model existing, user input requires .pth extension
+            if self.args.backend == 'pytorch':
+                if not os.path.exists(self.fullModelPathandName()):
+                    raise os.error(modelNotFoundError)
+                
+            # checking if ncnn model exists, user input excludes .bin or .param
+            if self.args.backend == 'ncnn':
+                if not os.path.exists(self.fullModelPathandName()  + '.bin') or not os.path.exists(self.fullModelPathandName() + '.param'):
+                    raise os.error(modelNotFoundError)
+                
             if not self.isDir:  # Executed if it is not rendering an image directory
                 if not os.path.isfile(self.args.input):
                     raise os.error("Input File/Directory does not exist.")

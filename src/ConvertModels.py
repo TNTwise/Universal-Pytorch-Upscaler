@@ -41,6 +41,7 @@ class ConvertModels:
             self.convertPyTorchToONNX()
         if self.outputFormat == "ncnn":
             self.convertPytorchToNCNN()
+
     def handleInput(self):
         x = torch.rand(1, 3, 256, 256)
         if self.half:
@@ -90,7 +91,7 @@ class ConvertModels:
 
     def convertPytorchToNCNN(self):
         """
-        Takes in a pytorch model, and uses JIT tracing with PNNX to convert it to end.
+        Takes in a pytorch model, and uses JIT tracing with PNNX to convert it to ncnn.
         This method removed unnecessary files, and fixes the param file to be compadible with most NCNN appliacitons.
         """
         model = self.model.model
