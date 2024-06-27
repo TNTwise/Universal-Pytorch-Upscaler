@@ -10,6 +10,9 @@ import onnx
 import onnxruntime
 import pnnx
 from io import BytesIO
+import cv2
+import ncnn
+import numpy as np
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 cwd = os.getcwd()
 
@@ -41,7 +44,7 @@ def loadModelWithScale(
     return model, scale
 
 
-class UpscaleImage:
+class UpscalePytorchImage:
     def __init__(
         self,
         modelPath: str = "models",
@@ -98,7 +101,7 @@ class UpscaleImage:
     def renderImagesInDirectory(self, dir):
         pass
 
-    def getScale(self, modelPath: str):
+    def getScale(self):
         return self.scale
 
     def renderTiledImage(
@@ -310,8 +313,65 @@ class ConvertModels:
             os.remove(os.path.join(cwd, 'debug2.param'))
         except:
             print("Failed to remove debug pnnx files.")
-        
+
         self.fixNCNNParamInput(ncnnParamLocation)
+
+class UpscaleNCNNImage:
+    def __init__(
+                self,
+                modelPath: str = "models",
+                modelName: str = "",
+                tile_pad=10,
+                ):
+        self.modelPath = modelPath
+        self.modelName = modelName
+        self.fullModelPath = os.path.join(self.modelPath, self.modelName)
+    def renderImage(self):
+
+
+        net = ncnn.Net()
+
+        # Use vulkan compute
+        net.opt.use_vulkan_compute = True
+
+        # Load model param and bin
+        net.load_param(self.fullModelPath + ".param")
+        net.load_model(self.fullModelPath + ".bin")
+
+        ex = net.create_extractor()
+
+        # Load image using opencv
+        img = cv2.imread("./example.jpg")
+
+        # Convert image to ncnn Mat
+        mat_in = ncnn.Mat.from_pixels(
+            img,
+            ncnn.Mat.PixelType.PIXEL_BGR,
+            img.shape[1],
+            img.shape[0]
+        )
+
+        # Normalize image (required)
+        # Note that passing in a normalized numpy array will not work.
+        mean_vals = []
+        norm_vals = [1 / 255.0, 1 / 255.0, 1 / 255.0]
+        mat_in.substract_mean_normalize(mean_vals, norm_vals)
+
+        # Try/except block to catch out-of-memory error
+        try:
+            # Make sure the input and output names match the param file
+            ex.input("data", mat_in)
+            ret, mat_out = ex.extract("output")
+            out = np.array(mat_out)
+
+            # Transpose the output from `c, h, w` to `h, w, c` and put it back in 0-255 range
+            output = out.transpose(1, 2, 0) * 255
+
+            # Save image using opencv
+            cv2.imwrite('./out.png', output)
+        except:
+            ncnn.destroy_gpu_instance()
+
 
 class HandleApplication:
     def __init__(self):
@@ -359,7 +419,7 @@ class HandleApplication:
 
     def RenderSingleImage(self, image: Image) -> Image:
         image = self.loadImage(image)
-        upscale = UpscaleImage(
+        upscale = UpscalePytorchImage(
             modelPath=self.args.modelPath,
             modelName=self.args.modelName,
             device=self.returnDevice(),
@@ -371,7 +431,7 @@ class HandleApplication:
         upscaledTensor = (
             upscale.renderImage(imageTensor)  # render image, tile if necessary
             if self.args.tilesize == 0
-            else upscale.renderTiledImage(imageTensor, self.tileSize)
+            else upscale.renderTiledImage(imageTensor, self.args.tilesize)
         )
         upscaledImage = upscale.tensorToImage(upscaledTensor)
         self.saveImage(upscaledImage)
@@ -405,6 +465,12 @@ class HandleApplication:
             help="tile size (>=32/0=auto, default=0)",
             default=0,
             type=int,
+        )
+        parser.add_argument(
+            "-b",
+            "--backend",
+            help="backend used to upscale image. (pytorch/ncnn, default=pytorch)",
+            default="pytorch",
         )
         parser.add_argument(
             "-m",

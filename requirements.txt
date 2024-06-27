@@ -7,3 +7,5 @@ pyinstaller
 onnx
 onnxruntime
 pnnx
+ncnn
+opencv-python
