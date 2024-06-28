@@ -51,7 +51,7 @@ jobs:
       - name: compress
         run: |
               cd dist
-              tar -cf - * | xz -9e > UniversalPytorchUpscalerMacOS.tar.xz *
+              tar -cf - * | xz -9e > UniversalPytorchUpscalerMacOS.tar.xz 
               
 
 
