@@ -1,10 +1,7 @@
 import torch
 import argparse
 import os
-from PIL import Image
-import onnx
-import ntpath
-import numpy as np
+
 
 from src.Util import is_image
 from src.UpscaleTorch import UpscalePytorchImage

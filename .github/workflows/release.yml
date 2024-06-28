@@ -46,7 +46,7 @@ jobs:
 
       - name: build
         run: |
-              python3 -m PyInstaller --onefile UniversalTorchUpscaler.py --collect-all torch --collect-all torchvision --collect-all spandrel --collect-all pnnx --collect-all onnx
+              python3 build.py
 
       - name: compress
         run: |
@@ -77,10 +77,11 @@ jobs:
       - name: install pip dependencies
         run: |
               python3 -m pip install -r requirements.txt        
+              python3 -m pip  install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
       - name: build
         run: |
-              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch --collect-all torchvision --collect-all spandrel --collect-all pnnx --collect-all onnx
+              python3 build.py
       - name: compress
         run: |
               ls
@@ -114,9 +115,10 @@ jobs:
       - name: install pip dependencies
         run: |
               python3 -m pip install -r requirements.txt
+              python3 -m pip  install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
       - name: build
         run: |
-              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch --collect-all torchvision --collect-all spandrel --collect-all pnnx --collect-all onnx
+              python3 build.py
       - name: compress
         run: |
               cd dist/UniversalTorchUpscaler
