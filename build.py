@@ -17,10 +17,7 @@ def build():
         "pnnx",
         "--collect-all",
         "opencv-python",
-        "--collect-all",
-        "numpy",
-        "--collect-all",
-        "pillow"
+      
 
     ]
     subprocess.run(command)
