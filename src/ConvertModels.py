@@ -2,7 +2,7 @@ import os
 import torch
 import pnnx
 
-from .Util import loadModelWithScale
+from .Util import loadModelWithScale, log
 cwd = os.getcwd()
 
 class ConvertModels:
@@ -108,18 +108,26 @@ class ConvertModels:
         ncnnPythonLocation = self.pathToModel +'_ncnn.py'
         ncnnParamLocation = self.pathToModel + '.ncnn.param'
 
-        model = pnnx.convert(
-            ptpath=jitTracedModelLocation,
-            inputs=input,
-            device=self.device,
-            optlevel=2,
-            fp16=True,
-            pnnxbin=pnnxBinLocation,
-            pnnxparam=pnnxParamLocation,
-            pnnxpy=pnnxPythonLocation,
-            pnnxonnx=pnnxOnnxLocation,
-            ncnnpy=ncnnPythonLocation,
-        )
+        # pnnx gives out a lot of weird errors, so i will be try/excepting this.
+        # usually nothing goes wrong, but it cant take in the pnnxbin/pnnxparam location on windows.
+        # temporarly commenting out specifying where things go, as that may cause the error
+
+        try:
+            model = pnnx.convert(
+                ptpath=jitTracedModelLocation,
+                inputs=input,
+                device=self.device,
+                optlevel=2,
+                fp16=True, 
+                #pnnxbin=pnnxBinLocation,
+                #pnnxparam=pnnxParamLocation, 
+                #pnnxpy=pnnxPythonLocation,
+                #pnnxonnx=pnnxOnnxLocation,
+                #ncnnpy=ncnnPythonLocation,
+            )
+        except Exception as e:
+            print("WARN: Something may have gone wrong with conversion!")
+            log(f"WARN: Something may have gone wrong with conversion: {e}")
 
         #remove stuff that we dont need
         try:
@@ -131,6 +139,7 @@ class ConvertModels:
             os.remove(ncnnPythonLocation)
         except:
             print("Could not remove unnecessary files.")
+
         try:
             os.remove(os.path.join(cwd, 'debug.bin'))
             os.remove(os.path.join(cwd, 'debug.param'))
