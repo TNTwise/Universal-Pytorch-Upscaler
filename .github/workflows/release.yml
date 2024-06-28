@@ -35,12 +35,12 @@ jobs:
 
       - name: Check Python version
         run: |
-          python --version
+          python3.11 --version
 
       
       - name: install pip dependencies
         run: |
-              python3 -m pip install -r requirements.txt
+              python3.11 -m pip install -r requirements.txt
               
         
 
