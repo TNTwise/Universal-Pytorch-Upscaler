@@ -119,8 +119,8 @@ jobs:
               python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel,pnnx
       - name: compress
         run: |
-              cd dist
-              tar -cf - * | xz -9e > UniversalPytorchUpscalerLinux.tar.xz * 
+              cd dist/Universal
+              tar -cf - * | xz -9e > UniversalPytorchUpscalerLinux.tar.xz
               
               
       - name: upload
