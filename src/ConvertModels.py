@@ -110,7 +110,6 @@ class ConvertModels:
 
         # pnnx gives out a lot of weird errors, so i will be try/excepting this.
         # usually nothing goes wrong, but it cant take in the pnnxbin/pnnxparam location on windows.
-        # temporarly commenting out specifying where things go, as that may cause the error
 
         try:
             model = pnnx.convert(
@@ -119,11 +118,11 @@ class ConvertModels:
                 device=self.device,
                 optlevel=2,
                 fp16=True, 
-                #pnnxbin=pnnxBinLocation,
-                #pnnxparam=pnnxParamLocation, 
-                #pnnxpy=pnnxPythonLocation,
-                #pnnxonnx=pnnxOnnxLocation,
-                #ncnnpy=ncnnPythonLocation,
+                pnnxbin=pnnxBinLocation,
+                pnnxparam=pnnxParamLocation, 
+                pnnxpy=pnnxPythonLocation,
+                pnnxonnx=pnnxOnnxLocation,
+                ncnnpy=ncnnPythonLocation,
             )
         except Exception as e:
             print("WARN: Something may have gone wrong with conversion!")
