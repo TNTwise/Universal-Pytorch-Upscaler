@@ -128,7 +128,7 @@ jobs:
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          path: dist/UniversalPytorchUpscalerLinux.tar.xz
+          path: dist/UniversalTorchUpscaler/UniversalPytorchUpscalerLinux.tar.xz
           
   Release:
     needs: [setup, windows, linux]
