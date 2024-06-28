@@ -97,7 +97,7 @@ class ConvertModels:
         model = self.model.model
         model.eval()
         input = torch.rand(1,3,256,256)
-        jitTracedModelLocation = self.pathToModel+'.pt'
+        jitTracedModelLocation = self.pathToModel +'.pt'
         jitTracedModel = torch.jit.trace(model,input)
         jitTracedModel.save(jitTracedModelLocation)
 
