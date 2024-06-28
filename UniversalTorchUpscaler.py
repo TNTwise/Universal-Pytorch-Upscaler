@@ -3,7 +3,8 @@ import argparse
 import os
 from PIL import Image
 import onnx
-
+import ntpath
+import numpy as np
 
 from src.Util import is_image
 from src.UpscaleTorch import UpscalePytorchImage
@@ -28,13 +29,9 @@ class HandleApplication:
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
 
-    
-
-    def loadImage(self, image: str) -> Image:
-        return Image.open(image)
 
     def exportModelAsNCNN(self):
-        x = ConvertModels(
+        ConvertModels(
             modelName=self.args.modelName,
             pathToModel=self.fullModelPathandName(),
             inputFormat="pytorch",
@@ -42,11 +39,11 @@ class HandleApplication:
             device="cpu",
             half=True,
             bfloat16=False
-        )
-        x.convertModel()
+        ).convertModel()
+        
 
     def exportModelAsONNX(self):
-        x = ConvertModels(
+        ConvertModels(
             modelName=self.args.modelName,
             pathToModel=self.fullModelPathandName(),
             inputFormat="pytorch",
@@ -55,11 +52,10 @@ class HandleApplication:
             half=self.args.half,
             bfloat16=self.args.bfloat16,
             opset=17,
-        )
-        x.convertModel()
+        ).convertModel()
 
     def pytorchRenderSingleImage(self, imagePath: str):
-        image = self.loadImage(imagePath)
+        
         upscale = UpscalePytorchImage(
             modelPath=self.args.modelPath,
             modelName=self.args.modelName,
@@ -67,14 +63,13 @@ class HandleApplication:
             half=self.args.half,
             bfloat16=self.args.bfloat16,
         )
-
-        imageTensor = upscale.imageToTensor(image)
+        imageTensor = upscale.loadImage(imagePath)
         upscaledTensor = (
             upscale.renderImage(imageTensor)  # render image, tile if necessary
             if self.args.tilesize == 0
             else upscale.renderTiledImage(imageTensor, self.args.tilesize)
         )
-        upscaledImage = upscale.tensorToImage(upscaledTensor)
+        upscaledImage = upscale.tensorToNPArray(upscaledTensor)
         upscale.saveImage(upscaledImage, self.args.output)
 
     def ncnnRenderSingleImage(self, imagePath: str):

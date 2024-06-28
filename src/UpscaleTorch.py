@@ -1,9 +1,9 @@
 
 import os
-from PIL import Image
 import torch
-from torchvision import transforms
 import math
+import numpy as np
+import cv2
 
 from .Util import loadModelWithScale
 
@@ -22,6 +22,13 @@ class UpscalePytorchImage:
         self.half = half
         self.bfloat16 = bfloat16
         self.tile_pad = tile_pad
+        # set dtype
+        self.dtype = torch.float
+        if self.half:
+            self.dtype = torch.half
+        
+        elif self.bfloat16:
+            self.dtype = torch.bfloat16
 
         path = os.path.join(modelPath, modelName)
         self.setDevice(device)
@@ -33,7 +40,20 @@ class UpscalePytorchImage:
     ):
         self.device = device
 
-    def imageToTensor(self, image: Image) -> torch.Tensor:
+    def loadImage(self, imagePath: str) -> torch.Tensor:
+        
+        image = cv2.imread(imagePath)
+        imageTensor = (
+            torch.from_numpy(image)
+            .to(
+                device=self.device,
+                dtype=self.dtype
+                )
+            .permute(2,0,1)
+            .unsqueeze(0)
+            .mul_(1/255)
+        )
+        '''image = PIL.Image.open(imagePath)
         transform = transforms.Compose(
             [
                 transforms.ToTensor(),  # Convert PIL image to tensor
@@ -44,24 +64,33 @@ class UpscalePytorchImage:
             transform(image)
             .unsqueeze(0)
             .to(self.device)
-        )
+        )'''
 
         if self.half:
             return imageTensor.half()
         if self.bfloat16:
             return imageTensor.bfloat16()
-
+        
         return imageTensor
 
-    def tensorToImage(self, image: torch.Tensor) -> Image:
-        transform = transforms.ToPILImage()
-        return transform(image.squeeze(0).float())
+    def tensorToNPArray(self, image: torch.Tensor) -> np.array:
+        return (
+                 image
+                .squeeze(0)
+                .permute(1, 2, 0)
+                .float()
+                .mul(255)
+                .cpu()
+                .numpy()
+                )
 
     @torch.inference_mode()
     def renderImage(self, image: torch.Tensor) -> torch.Tensor:
-        with torch.no_grad():
-            return self.model(image)
-
+        print(image.shape)
+        upscaledImage = self.model(image)
+        print(upscaledImage)
+        return upscaledImage
+        
     @torch.inference_mode()
     def renderImagesInDirectory(self, dir):
         pass
@@ -69,8 +98,10 @@ class UpscalePytorchImage:
     def getScale(self):
         return self.scale
 
-    def saveImage(self, image: Image, fullOutputPathLocation):
-        image.save(fullOutputPathLocation)
+    def saveImage(self, image: np.array, fullOutputPathLocation):
+        print(image.shape)
+        cv2.imwrite(fullOutputPathLocation, image)
+    
 
     def renderTiledImage(
         self, image: torch.Tensor, tile_size: int = 32
