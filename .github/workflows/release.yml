@@ -116,20 +116,19 @@ jobs:
       - name: install pip dependencies
         run: |
               python3 -m pip install -r requirements.txt
-              python3 -m pip  install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-
       - name: build
         run: |
-              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel
+              python3 -m PyInstaller UniversalTorchUpscaler.py --collect-all torch,torchvision,spandrel,pnnx
       - name: compress
         run: |
               cd dist
-              tar -cf - * | xz -9e > ../UniversalPytorchUpscalerLinux.tar.xz * 
+              tar -cf - * | xz -9e > UniversalPytorchUpscalerLinux.tar.xz * 
+              
               
       - name: upload
         uses: actions/upload-artifact@v3
         with:
-          path: UniversalPytorchUpscalerLinux.tar.xz
+          path: dist/UniversalPytorchUpscalerLinux.tar.xz
           
   Release:
     needs: [setup, windows]
