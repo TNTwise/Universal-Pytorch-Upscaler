@@ -34,7 +34,7 @@ class HandleApplication:
             inputFormat="pytorch",
             outputFormat="ncnn",
             device="cpu",
-            half=True,
+            half=self.args.half,
             bfloat16=False
         ).convertModel()
         

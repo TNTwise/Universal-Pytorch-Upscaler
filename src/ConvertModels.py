@@ -117,7 +117,7 @@ class ConvertModels:
                 inputs=input,
                 device=self.device,
                 optlevel=2,
-                fp16=True, 
+                fp16=self.half, 
                 pnnxbin=pnnxBinLocation,
                 pnnxparam=pnnxParamLocation, 
                 pnnxpy=pnnxPythonLocation,
