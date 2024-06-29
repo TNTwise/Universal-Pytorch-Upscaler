@@ -2,8 +2,7 @@ import torch
 import argparse
 import os
 
-
-from src.Util import is_image
+from src.Util import is_image, warnAndLog
 from src.UpscaleTorch import UpscalePytorchImage
 from src.UpscaleNCNN import UpscaleNCNNImage
 from src.ConvertModels import ConvertModels
@@ -224,6 +223,10 @@ class HandleApplication:
                 raise os.error("tilesize has to be 22 greater than the overlap size!")
             if self.args.overlap <= 10 and self.args.tilesize > 0:
                 raise os.error("overlap size has to be greater than 10")
+
+            # warnings
+            if self.args.backend == "ncnn" and self.args.half or self.args.bfloat16:
+                warnAndLog("ncnn inference will default to the models precision.")
         if self.args.half and self.args.bfloat16:
             raise os.error("Cannot use half and bfloat16 at the same time!")
 

@@ -2,7 +2,7 @@ import os
 import torch
 import pnnx
 
-from .Util import loadModelWithScale, log
+from .Util import loadModelWithScale, log, warnAndLog
 
 cwd = os.getcwd()
 
@@ -128,8 +128,7 @@ class ConvertModels:
                 ncnnpy=ncnnPythonLocation,
             )
         except Exception as e:
-            print("WARN: Something may have gone wrong with conversion!")
-            log(f"WARN: Something may have gone wrong with conversion: {e}")
+            warnAndLog(f"Something may have gone wrong with conversion! {e}")
 
         # remove stuff that we dont need
         try:
@@ -139,15 +138,13 @@ class ConvertModels:
             os.remove(pnnxPythonLocation)
             os.remove(pnnxOnnxLocation)
             os.remove(ncnnPythonLocation)
-        except:
-            print("Could not remove unnecessary files.")
-
+        except Exception as e:
+            warnAndLog(f"Could not remove unnecessary files. {e} ")
         try:
             os.remove(os.path.join(cwd, "debug.bin"))
             os.remove(os.path.join(cwd, "debug.param"))
             os.remove(os.path.join(cwd, "debug2.bin"))
             os.remove(os.path.join(cwd, "debug2.param"))
         except:
-            print("Failed to remove debug pnnx files.")
-
+            warnAndLog(f"Failed to remove debug pnnx files. {e} ")
         self.fixNCNNParamInput(ncnnParamLocation)
