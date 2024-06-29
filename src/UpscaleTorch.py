@@ -1,4 +1,3 @@
-
 import os
 import torch
 import math
@@ -9,15 +8,16 @@ from .Util import loadModelWithScale
 
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 
+
 class UpscalePytorchImage:
     def __init__(
         self,
         modelPath: str = "models",
         modelName: str = "",
         device="cuda",
-        tile_pad:int = 10,
-        half:bool=False,
-        bfloat16:bool=False,
+        tile_pad: int = 10,
+        half: bool = False,
+        bfloat16: bool = False,
     ):
         self.half = half
         self.bfloat16 = bfloat16
@@ -26,7 +26,7 @@ class UpscalePytorchImage:
         self.dtype = torch.float
         if self.half:
             self.dtype = torch.half
-        
+
         elif self.bfloat16:
             self.dtype = torch.bfloat16
 
@@ -41,19 +41,15 @@ class UpscalePytorchImage:
         self.device = device
 
     def loadImage(self, imagePath: str) -> torch.Tensor:
-        
         image = cv2.imread(imagePath)
         imageTensor = (
             torch.from_numpy(image)
-            .to(
-                device=self.device,
-                dtype=self.dtype
-                )
-            .permute(2,0,1)
+            .to(device=self.device, dtype=self.dtype)
+            .permute(2, 0, 1)
             .unsqueeze(0)
-            .mul_(1/255)
+            .mul_(1 / 255)
         )
-        '''image = PIL.Image.open(imagePath)
+        """image = PIL.Image.open(imagePath)
         transform = transforms.Compose(
             [
                 transforms.ToTensor(),  # Convert PIL image to tensor
@@ -64,31 +60,23 @@ class UpscalePytorchImage:
             transform(image)
             .unsqueeze(0)
             .to(self.device)
-        )'''
+        )"""
 
         if self.half:
             return imageTensor.half()
         if self.bfloat16:
             return imageTensor.bfloat16()
-        
+
         return imageTensor
 
     def tensorToNPArray(self, image: torch.Tensor) -> np.array:
-        return (
-                 image
-                .squeeze(0)
-                .permute(1, 2, 0)
-                .float()
-                .mul(255)
-                .cpu()
-                .numpy()
-                )
+        return image.squeeze(0).permute(1, 2, 0).float().mul(255).cpu().numpy()
 
     @torch.inference_mode()
     def renderImage(self, image: torch.Tensor) -> torch.Tensor:
         upscaledImage = self.model(image)
         return upscaledImage
-        
+
     @torch.inference_mode()
     def renderImagesInDirectory(self, dir):
         pass
@@ -98,10 +86,10 @@ class UpscalePytorchImage:
 
     def saveImage(self, image: np.array, fullOutputPathLocation):
         cv2.imwrite(fullOutputPathLocation, image)
-    
 
     def renderTiledImage(
-        self, image: torch.Tensor, 
+        self,
+        image: torch.Tensor,
         tile_size: int = 32,
     ) -> torch.Tensor:
         """It will first crop input images to tiles, and then process each tile.

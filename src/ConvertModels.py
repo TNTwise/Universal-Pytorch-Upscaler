@@ -3,7 +3,9 @@ import torch
 import pnnx
 
 from .Util import loadModelWithScale, log
+
 cwd = os.getcwd()
+
 
 class ConvertModels:
     def __init__(
@@ -76,17 +78,18 @@ class ConvertModels:
                 do_constant_folding=True,
                 dynamic_axes=self.onnxDynamicAxes,
             )
-    def fixNCNNParamInput(self,paramFile):
+
+    def fixNCNNParamInput(self, paramFile):
         """
         replaces in0 with data and out0 with output in a ncnn param file
         """
         newParamFile = []
-        with open(paramFile, 'r') as f:
+        with open(paramFile, "r") as f:
             for line in f.readlines():
-                line = line.replace('in0','data')
-                line = line.replace('out0','output')
+                line = line.replace("in0", "data")
+                line = line.replace("out0", "output")
                 newParamFile.append(line)
-        with open(paramFile, 'w') as f:
+        with open(paramFile, "w") as f:
             f.writelines(newParamFile)
 
     def convertPytorchToNCNN(self):
@@ -96,17 +99,17 @@ class ConvertModels:
         """
         model = self.model.model
         model.eval()
-        input = torch.rand(1,3,256,256)
-        jitTracedModelLocation = self.pathToModel +'.pt'
-        jitTracedModel = torch.jit.trace(model,input)
+        input = torch.rand(1, 3, 256, 256)
+        jitTracedModelLocation = self.pathToModel + ".pt"
+        jitTracedModel = torch.jit.trace(model, input)
         jitTracedModel.save(jitTracedModelLocation)
 
-        pnnxBinLocation = self.pathToModel +'.pnnx.bin'
-        pnnxParamLocation = self.pathToModel +'.pnnx.param'
-        pnnxPythonLocation = self.pathToModel +'_pnnx.py'
-        pnnxOnnxLocation = self.pathToModel +'.pnnx.onnx'
-        ncnnPythonLocation = self.pathToModel +'_ncnn.py'
-        ncnnParamLocation = self.pathToModel + '.ncnn.param'
+        pnnxBinLocation = self.pathToModel + ".pnnx.bin"
+        pnnxParamLocation = self.pathToModel + ".pnnx.param"
+        pnnxPythonLocation = self.pathToModel + "_pnnx.py"
+        pnnxOnnxLocation = self.pathToModel + ".pnnx.onnx"
+        ncnnPythonLocation = self.pathToModel + "_ncnn.py"
+        ncnnParamLocation = self.pathToModel + ".ncnn.param"
 
         # pnnx gives out a lot of weird errors, so i will be try/excepting this.
         # usually nothing goes wrong, but it cant take in the pnnxbin/pnnxparam location on windows.
@@ -117,9 +120,9 @@ class ConvertModels:
                 inputs=input,
                 device=self.device,
                 optlevel=2,
-                fp16=self.half, 
+                fp16=self.half,
                 pnnxbin=pnnxBinLocation,
-                pnnxparam=pnnxParamLocation, 
+                pnnxparam=pnnxParamLocation,
                 pnnxpy=pnnxPythonLocation,
                 pnnxonnx=pnnxOnnxLocation,
                 ncnnpy=ncnnPythonLocation,
@@ -128,7 +131,7 @@ class ConvertModels:
             print("WARN: Something may have gone wrong with conversion!")
             log(f"WARN: Something may have gone wrong with conversion: {e}")
 
-        #remove stuff that we dont need
+        # remove stuff that we dont need
         try:
             os.remove(jitTracedModelLocation)
             os.remove(pnnxBinLocation)
@@ -140,10 +143,10 @@ class ConvertModels:
             print("Could not remove unnecessary files.")
 
         try:
-            os.remove(os.path.join(cwd, 'debug.bin'))
-            os.remove(os.path.join(cwd, 'debug.param'))
-            os.remove(os.path.join(cwd, 'debug2.bin'))
-            os.remove(os.path.join(cwd, 'debug2.param'))
+            os.remove(os.path.join(cwd, "debug.bin"))
+            os.remove(os.path.join(cwd, "debug.param"))
+            os.remove(os.path.join(cwd, "debug2.bin"))
+            os.remove(os.path.join(cwd, "debug2.param"))
         except:
             print("Failed to remove debug pnnx files.")
 

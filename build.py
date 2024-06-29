@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def build():
     command = [
         "python3",
@@ -17,10 +18,9 @@ def build():
         "pnnx",
         "--collect-all",
         "opencv-python",
-      
-
     ]
     subprocess.run(command)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     build()

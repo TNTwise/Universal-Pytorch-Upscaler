@@ -14,18 +14,18 @@ class HandleApplication:
         self.args = self.handleArguments()
         self.checkArguments()
         if self.args.export == None:
-            if self.args.backend == 'pytorch':
+            if self.args.backend == "pytorch":
                 self.pytorchRenderSingleImage(self.args.input)
-            if self.args.backend == 'ncnn':
+            if self.args.backend == "ncnn":
                 self.ncnnRenderSingleImage(self.args.input)
         elif self.args.export.lower().strip() == "onnx":
             self.exportModelAsONNX()
         elif self.args.export.lower().strip() == "ncnn":
             self.exportModelAsNCNN()
+
     def returnDevice(self):
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
-
 
     def exportModelAsNCNN(self):
         ConvertModels(
@@ -35,9 +35,8 @@ class HandleApplication:
             outputFormat="ncnn",
             device="cpu",
             half=self.args.half,
-            bfloat16=False
+            bfloat16=False,
         ).convertModel()
-        
 
     def exportModelAsONNX(self):
         ConvertModels(
@@ -52,7 +51,6 @@ class HandleApplication:
         ).convertModel()
 
     def pytorchRenderSingleImage(self, imagePath: str):
-        
         upscale = UpscalePytorchImage(
             modelPath=self.args.modelPath,
             modelName=self.args.modelName,
@@ -66,9 +64,8 @@ class HandleApplication:
             upscale.renderImage(imageTensor)  # render image, tile if necessary
             if self.args.tilesize == 0
             else upscale.renderTiledImage(
-                image=imageTensor, 
-                tile_size=self.args.tilesize
-                )
+                image=imageTensor, tile_size=self.args.tilesize
+            )
         )
         upscaledImage = upscale.tensorToNPArray(upscaledTensor)
         upscale.saveImage(upscaledImage, self.args.output)
@@ -79,7 +76,7 @@ class HandleApplication:
             modelName=self.args.modelName,
         )
         upscaledImage = upscale.renderImage(fullImagePath=imagePath)
-        upscale.saveImage(upscaledImage,self.args.output)
+        upscale.saveImage(upscaledImage, self.args.output)
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -97,14 +94,14 @@ class HandleApplication:
             "--input",
             default=None,
             help="input image path (jpg/png/webp) or directory",
-            type=str
+            type=str,
         )
         parser.add_argument(
             "-o",
             "--output",
             default=None,
             help="output image path (jpg/png/webp) or directory",
-            type=str
+            type=str,
         )
         parser.add_argument(
             "-t",
@@ -125,21 +122,21 @@ class HandleApplication:
             "--backend",
             help="backend used to upscale image. (pytorch/ncnn, default=pytorch)",
             default="pytorch",
-            type=str
+            type=str,
         )
         parser.add_argument(
             "-m",
             "--modelPath",
             help="folder path to the pre-trained models. default=models",
             default="models",
-            type=str
+            type=str,
         )
         parser.add_argument(
-            "-n", 
-            "--modelName", 
-            required=True, 
+            "-n",
+            "--modelName",
+            required=True,
             help="model name (include extension)",
-            type=str
+            type=str,
         )
         parser.add_argument(
             "-c",
@@ -148,7 +145,9 @@ class HandleApplication:
             action="store_true",
         )
         parser.add_argument(
-            "-f","--format", help="output image format (jpg/png/webp, auto=same as input, default=auto)"
+            "-f",
+            "--format",
+            help="output image format (jpg/png/webp, auto=same as input, default=auto)",
         )
         parser.add_argument(
             "--half",
@@ -166,7 +165,7 @@ class HandleApplication:
             "--export",
             help="Export PyTorch models to ONNX and NCNN. Options: (onnx/ncnn)",
             default=None,
-            type=str
+            type=str,
         )
         return parser.parse_args()
 
@@ -191,17 +190,19 @@ class HandleApplication:
 
             if self.args.input == self.args.output:
                 raise os.error("Input and output cannot be the same image.")
-            
+
             # checks for pytorch model existing, user input requires .pth extension
-            if self.args.backend == 'pytorch':
+            if self.args.backend == "pytorch":
                 if not os.path.exists(self.fullModelPathandName()):
                     raise os.error(modelNotFoundError)
-                
+
             # checking if ncnn model exists, user input excludes .bin or .param
-            if self.args.backend == 'ncnn':
-                if not os.path.exists(self.fullModelPathandName()  + '.bin') or not os.path.exists(self.fullModelPathandName() + '.param'):
+            if self.args.backend == "ncnn":
+                if not os.path.exists(
+                    self.fullModelPathandName() + ".bin"
+                ) or not os.path.exists(self.fullModelPathandName() + ".param"):
                     raise os.error(modelNotFoundError)
-                
+
             if not self.isDir:  # Executed if it is not rendering an image directory
                 if not os.path.isfile(self.args.input):
                     raise os.error("Input File/Directory does not exist.")
@@ -218,17 +219,11 @@ class HandleApplication:
                         "Output must be a directory if input is a directory."
                     )
             if self.args.tilesize == 0 and self.args.overlap > 0:
-                raise os.error(
-                    "overlap must be used with tiling."
-                )
+                raise os.error("overlap must be used with tiling.")
             if self.args.tilesize < self.args.overlap + 22:
-                raise os.error(
-                    "tilesize has to be 22 greater than the overlap size!"
-                )
+                raise os.error("tilesize has to be 22 greater than the overlap size!")
             if self.args.overlap <= 10:
-                raise os.error(
-                    "overlap size has to be greater than 10"
-                )
+                raise os.error("overlap size has to be greater than 10")
         if self.args.half and self.args.bfloat16:
             raise os.error("Cannot use half and bfloat16 at the same time!")
 

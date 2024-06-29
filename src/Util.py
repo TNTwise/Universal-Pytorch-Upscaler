@@ -1,8 +1,9 @@
-
 from PIL import Image
 from spandrel import ImageModelDescriptor, ModelLoader
 import os
+
 cwd = os.getcwd()
+
 
 def is_image(file_path):
     try:
@@ -31,10 +32,7 @@ def loadModelWithScale(
             model.bfloat16()
     return model, scale
 
-def log(message:str):
-    with open(
-        os.path.join(cwd, 'log.txt'), 
-        'a'
-    ) as f:
-        
-        f.write(message + '\n')
+
+def log(message: str):
+    with open(os.path.join(cwd, "log.txt"), "a") as f:
+        f.write(message + "\n")
