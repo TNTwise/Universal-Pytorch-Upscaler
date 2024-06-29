@@ -15,9 +15,9 @@ class UpscalePytorchImage:
         modelPath: str = "models",
         modelName: str = "",
         device="cuda",
-        tile_pad=10,
-        half=False,
-        bfloat16=False,
+        tile_pad:int = 10,
+        half:bool=False,
+        bfloat16:bool=False,
     ):
         self.half = half
         self.bfloat16 = bfloat16
@@ -86,9 +86,7 @@ class UpscalePytorchImage:
 
     @torch.inference_mode()
     def renderImage(self, image: torch.Tensor) -> torch.Tensor:
-        print(image.shape)
         upscaledImage = self.model(image)
-        print(upscaledImage)
         return upscaledImage
         
     @torch.inference_mode()
@@ -99,12 +97,12 @@ class UpscalePytorchImage:
         return self.scale
 
     def saveImage(self, image: np.array, fullOutputPathLocation):
-        print(image.shape)
         cv2.imwrite(fullOutputPathLocation, image)
     
 
     def renderTiledImage(
-        self, image: torch.Tensor, tile_size: int = 32
+        self, image: torch.Tensor, 
+        tile_size: int = 32,
     ) -> torch.Tensor:
         """It will first crop input images to tiles, and then process each tile.
         Finally, all the processed tiles are merged into one images.

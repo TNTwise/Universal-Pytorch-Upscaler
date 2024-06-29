@@ -57,6 +57,7 @@ class HandleApplication:
             modelPath=self.args.modelPath,
             modelName=self.args.modelName,
             device=self.returnDevice(),
+            tile_pad=self.args.overlap,
             half=self.args.half,
             bfloat16=self.args.bfloat16,
         )
@@ -64,7 +65,10 @@ class HandleApplication:
         upscaledTensor = (
             upscale.renderImage(imageTensor)  # render image, tile if necessary
             if self.args.tilesize == 0
-            else upscale.renderTiledImage(imageTensor, self.args.tilesize)
+            else upscale.renderTiledImage(
+                image=imageTensor, 
+                tile_size=self.args.tilesize
+                )
         )
         upscaledImage = upscale.tensorToNPArray(upscaledTensor)
         upscale.saveImage(upscaledImage, self.args.output)
@@ -93,17 +97,26 @@ class HandleApplication:
             "--input",
             default=None,
             help="input image path (jpg/png/webp) or directory",
+            type=str
         )
         parser.add_argument(
             "-o",
             "--output",
             default=None,
             help="output image path (jpg/png/webp) or directory",
+            type=str
         )
         parser.add_argument(
             "-t",
             "--tilesize",
-            help="tile size (>=32/0=auto, default=0)",
+            help="tile size (default=0)",
+            default=0,
+            type=int,
+        )
+        parser.add_argument(
+            "-l",
+            "--overlap",
+            help="overlap size on tiled rendering (default=10)",
             default=0,
             type=int,
         )
@@ -112,15 +125,21 @@ class HandleApplication:
             "--backend",
             help="backend used to upscale image. (pytorch/ncnn, default=pytorch)",
             default="pytorch",
+            type=str
         )
         parser.add_argument(
             "-m",
             "--modelPath",
             help="folder path to the pre-trained models. default=models",
             default="models",
+            type=str
         )
         parser.add_argument(
-            "-n", "--modelName", required=True, help="model name (include extension)"
+            "-n", 
+            "--modelName", 
+            required=True, 
+            help="model name (include extension)",
+            type=str
         )
         parser.add_argument(
             "-c",
@@ -129,7 +148,7 @@ class HandleApplication:
             action="store_true",
         )
         parser.add_argument(
-            "-f","--format", help="output image format (jpg/png/webp, default=ext/png)"
+            "-f","--format", help="output image format (jpg/png/webp, auto=same as input, default=auto)"
         )
         parser.add_argument(
             "--half",
@@ -147,6 +166,7 @@ class HandleApplication:
             "--export",
             help="Export PyTorch models to ONNX and NCNN. Options: (onnx/ncnn)",
             default=None,
+            type=str
         )
         return parser.parse_args()
 
@@ -197,7 +217,18 @@ class HandleApplication:
                     raise os.error(
                         "Output must be a directory if input is a directory."
                     )
-
+            if self.args.tilesize == 0 and self.args.overlap > 0:
+                raise os.error(
+                    "overlap must be used with tiling."
+                )
+            if self.args.tilesize < self.args.overlap + 22:
+                raise os.error(
+                    "tilesize has to be 22 greater than the overlap size!"
+                )
+            if self.args.overlap <= 10:
+                raise os.error(
+                    "overlap size has to be greater than 10"
+                )
         if self.args.half and self.args.bfloat16:
             raise os.error("Cannot use half and bfloat16 at the same time!")
 
