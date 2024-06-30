@@ -16,29 +16,15 @@ class UpscalePytorchImage:
         modelName: str = "",
         device="cuda",
         tile_pad: int = 10,
-        half: bool = False,
-        bfloat16: bool = False,
+        dtype: torch.dtype = torch.float32,
     ):
-        self.half = half
-        self.bfloat16 = bfloat16
         self.tile_pad = tile_pad
-        # set dtype
-        self.dtype = torch.float
-        if self.half:
-            self.dtype = torch.half
-
-        elif self.bfloat16:
-            self.dtype = torch.bfloat16
+        self.dtype = dtype
+        self.device = device
 
         path = os.path.join(modelPath, modelName)
-        self.setDevice(device)
-        self.model, self.scale = loadModelWithScale(path, half, bfloat16, device)
 
-    def setDevice(
-        self,
-        device: str = "cuda",
-    ):
-        self.device = device
+        self.model, self.scale = loadModelWithScale(path, dtype, device)
 
     def loadImage(self, imagePath: str) -> torch.Tensor:
         image = cv2.imread(imagePath)
@@ -49,25 +35,8 @@ class UpscalePytorchImage:
             .unsqueeze(0)
             .mul_(1 / 255)
         )
-        """image = PIL.Image.open(imagePath)
-        transform = transforms.Compose(
-            [
-                transforms.ToTensor(),  # Convert PIL image to tensor
-            ]
-        )
 
-        imageTensor = (
-            transform(image)
-            .unsqueeze(0)
-            .to(self.device)
-        )"""
-
-        if self.half:
-            return imageTensor.half()
-        if self.bfloat16:
-            return imageTensor.bfloat16()
-
-        return imageTensor
+        return imageTensor.to(device=self.device, dtype=self.dtype)
 
     def tensorToNPArray(self, image: torch.Tensor) -> np.array:
         return image.squeeze(0).permute(1, 2, 0).float().mul(255).cpu().numpy()

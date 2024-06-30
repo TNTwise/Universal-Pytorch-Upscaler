@@ -12,6 +12,7 @@ class HandleApplication:
     def __init__(self):
         self.args = self.handleArguments()
         self.checkArguments()
+        self.setDType()
         if self.args.export == None:
             if self.args.backend == "pytorch":
                 self.pytorchRenderSingleImage(self.args.input)
@@ -21,6 +22,14 @@ class HandleApplication:
             self.exportModelAsONNX()
         elif self.args.export.lower().strip() == "ncnn":
             self.exportModelAsNCNN()
+
+    def setDType(self):
+        if self.args.half:
+            self.dtype = torch.half
+        elif self.args.bfloat16:
+            self.dtype = torch.bfloat16
+        else:
+            self.dtype = torch.float32
 
     def returnDevice(self):
         if not self.args.cpu:
@@ -33,8 +42,7 @@ class HandleApplication:
             inputFormat="pytorch",
             outputFormat="ncnn",
             device="cpu",
-            half=self.args.half,
-            bfloat16=False,
+            dtype=self.dtype,
         ).convertModel()
 
     def exportModelAsONNX(self):
@@ -44,8 +52,7 @@ class HandleApplication:
             inputFormat="pytorch",
             outputFormat="onnx",
             device=self.returnDevice(),
-            half=self.args.half,
-            bfloat16=self.args.bfloat16,
+            dtype=self.dtype,
             opset=17,
         ).convertModel()
 
@@ -55,8 +62,7 @@ class HandleApplication:
             modelName=self.args.modelName,
             device=self.returnDevice(),
             tile_pad=self.args.overlap,
-            half=self.args.half,
-            bfloat16=self.args.bfloat16,
+            dtype=self.dtype,
         )
         imageTensor = upscale.loadImage(imagePath)
         upscaledTensor = (

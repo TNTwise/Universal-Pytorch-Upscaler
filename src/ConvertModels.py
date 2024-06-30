@@ -2,7 +2,7 @@ import os
 import torch
 import pnnx
 
-from .Util import loadModelWithScale, log, warnAndLog
+from .Util import loadModel, log, warnAndLog
 
 cwd = os.getcwd()
 
@@ -16,8 +16,7 @@ class ConvertModels:
         outputFormat: str = "onnx",
         ncnnConversionMethod: str = "onnx",
         device: str = "cpu",
-        half: bool = False,
-        bfloat16: bool = False,
+        dtype: torch.dtype = torch.float32,
         opset: int = 18,
         onnxDynamicAxess: dict = None,
     ):
@@ -29,16 +28,11 @@ class ConvertModels:
         self.ncnnConversionMethod = ncnnConversionMethod
         self.device = device
         self.opset = opset
-        self.half = half
-        self.bfloat16 = bfloat16
+        self.dtype = dtype
         self.onnxDynamicAxes = onnxDynamicAxess
 
     def convertModel(self):
         self.input = self.handleInput()
-        # load model
-        self.model, scale = loadModelWithScale(
-            self.pathToModel, self.half, self.bfloat16, self.device
-        )
         if self.outputFormat == "onnx":
             self.convertPyTorchToONNX()
         if self.outputFormat == "ncnn":
@@ -46,23 +40,15 @@ class ConvertModels:
 
     def handleInput(self):
         x = torch.rand(1, 3, 256, 256)
-        if self.half:
-            x = x.half()
-        if self.bfloat16:
-            x = x.bfloat16()
-        if self.device == "cuda":
-            x = x.cuda()
-        return x
+
+        return x.to(device=self.device, dtype=self.dtype)
 
     def generateONNXOutputName(self) -> str:
-        if self.half:
-            return f"{self.modelName}_op{self.opset}_half.onnx"
-        if self.bfloat16:
-            return f"{self.modelName}_op{self.opset}_bfloat16.onnx"
-        return f"{self.modelName}_op{self.opset}.onnx"
+        return f"{self.modelName}_op{self.opset}_{self.dtype}.onnx"
 
     def convertPyTorchToONNX(self):
-        model = self.model.model
+        # load model
+        model = loadModel(self.pathToModel, self.dtype, self.device).model
         state_dict = model.state_dict()
         model.eval()
         model.load_state_dict(state_dict, strict=True)
@@ -97,7 +83,7 @@ class ConvertModels:
         Takes in a pytorch model, and uses JIT tracing with PNNX to convert it to ncnn.
         This method removed unnecessary files, and fixes the param file to be compadible with most NCNN appliacitons.
         """
-        model = self.model.model
+        model = loadModel(self.pathToModel, torch.float32, self.device).model
         model.eval()
         input = torch.rand(1, 3, 256, 256)
         jitTracedModelLocation = self.pathToModel + ".pt"
@@ -120,7 +106,7 @@ class ConvertModels:
                 inputs=input,
                 device=self.device,
                 optlevel=2,
-                fp16=self.half,
+                fp16=self.dtype == torch.float16,
                 pnnxbin=pnnxBinLocation,
                 pnnxparam=pnnxParamLocation,
                 pnnxpy=pnnxPythonLocation,
