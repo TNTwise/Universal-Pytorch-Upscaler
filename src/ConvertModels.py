@@ -32,51 +32,43 @@ class ConvertModels:
         self.onnxDynamicAxes = onnxDynamicAxess
 
     def convertModel(self):
-        self.input = self.handleInput()
+        self.input = torch.rand(1, 3, 256, 256).to(device=self.device, dtype=self.dtype)
         if self.outputFormat == "onnx":
             self.convertPyTorchToONNX()
         if self.outputFormat == "ncnn":
             self.convertPytorchToNCNN()
-
-    def handleInput(self):
-        x = torch.rand(1, 3, 256, 256)
-
-        return x.to(device=self.device, dtype=self.dtype)
-
-    def generateONNXOutputName(self) -> str:
-        return f"{self.modelName}_op{self.opset}_{self.dtype}.onnx"
-
+   
+    @torch.inference_mode
     def convertPyTorchToONNX(self):
         # load model
         model = loadModel(self.pathToModel, self.dtype, self.device).model
         state_dict = model.state_dict()
         model.eval()
         model.load_state_dict(state_dict, strict=True)
-        with torch.inference_mode():
-            torch.onnx.export(
-                model,
-                self.input,
-                self.generateONNXOutputName(),
-                opset_version=self.opset,
-                verbose=False,
-                input_names=["input"],
-                output_names=["output"],
-                do_constant_folding=True,
-                dynamic_axes=self.onnxDynamicAxes,
-            )
+        torch.onnx.export(
+            model,
+            self.input,
+            f"{self.modelName}_op{self.opset}_{self.dtype}.onnx",
+            opset_version=self.opset,
+            verbose=False,
+            input_names=["input"],
+            output_names=["output"],
+            do_constant_folding=True,
+            dynamic_axes=self.onnxDynamicAxes,
+        )
 
     def fixNCNNParamInput(self, paramFile):
         """
         replaces in0 with data and out0 with output in a ncnn param file
         """
-        newParamFile = []
         with open(paramFile, "r") as f:
-            for line in f.readlines():
+            lines = f.readlines()
+
+        with open(paramFile, "w") as f:
+            for line in lines:
                 line = line.replace("in0", "data")
                 line = line.replace("out0", "output")
-                newParamFile.append(line)
-        with open(paramFile, "w") as f:
-            f.writelines(newParamFile)
+                f.write(line)
 
     def convertPytorchToNCNN(self):
         """

@@ -231,6 +231,8 @@ class HandleApplication:
                 raise os.error("overlap size has to be greater than 10")
 
             # warnings
+            if self.args.export == "ncnn" and self.args.bfloat16:
+                warnAndLog("ncnn export does not support bfloat16, defaulting to f32")
             if self.args.backend == "ncnn" and self.args.half or self.args.bfloat16:
                 warnAndLog("ncnn inference will default to the models precision.")
         if self.args.half and self.args.bfloat16:
