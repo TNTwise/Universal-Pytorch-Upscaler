@@ -1,8 +1,11 @@
-numpy==1.24.4
+numpy<2.0.0
 pillow
-https://download.pytorch.org/whl/nightly/pytorch_triton_rocm-3.0.0%2B01cbe5045a-cp311-cp311-linux_x86_64.whl
-https://download.pytorch.org/whl/nightly/rocm6.1/torch-2.5.0.dev20240629%2Brocm6.1-cp311-cp311-linux_x86_64.whl
-https://download.pytorch.org/whl/nightly/rocm6.1/torchvision-0.20.0.dev20240629%2Brocm6.1-cp311-cp311-linux_x86_64.whl
+-i https://download.pytorch.org/whl/nightly/rocm6.1
+pytorch_triton 
+-i https://download.pytorch.org/whl/nightly/rocm6.1
+torch 
+-i https://download.pytorch.org/whl/nightly/rocm6.1
+torchvision 
 spandrel>=0.3.3
 pyinstaller
 onnx
