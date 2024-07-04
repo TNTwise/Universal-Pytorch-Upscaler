@@ -1,15 +1,16 @@
+pytorch_triton
+-i https://download.pytorch.org/whl/nightly/rocm6.1
+torch
+-i https://download.pytorch.org/whl/nightly/rocm6.1
+torchvision
+-i https://download.pytorch.org/whl/nightly/rocm6.1
+
 numpy<2.0.0
-pillow
--i https://download.pytorch.org/whl/nightly/rocm6.1
-pytorch_triton 
--i https://download.pytorch.org/whl/nightly/rocm6.1
-torch 
--i https://download.pytorch.org/whl/nightly/rocm6.1
-torchvision 
-spandrel>=0.3.3
-pyinstaller
+pillow 
 onnx
-onnxruntime
 pnnx
 ncnn
 opencv-python
+spandrel
+onnxruntime
+
