@@ -227,8 +227,10 @@ class HandleApplication:
                 raise os.error("overlap must be used with tiling.")
             if self.args.tilesize < self.args.overlap + 22 and self.args.tilesize > 0:
                 raise os.error("tilesize has to be 22 greater than the overlap size!")
-            if self.args.overlap <= 10 and self.args.tilesize > 0:
-                raise os.error("overlap size has to be greater than 10")
+            if self.args.overlap == 0 and self.args.tilesize > 0:
+                self.args.overlap = 10
+            if self.args.overlap < 10 and self.args.tilesize > 0:
+                raise os.error("overlap size has to be greater than 9")
 
             # warnings
             if self.args.export == "ncnn" and self.args.bfloat16:
