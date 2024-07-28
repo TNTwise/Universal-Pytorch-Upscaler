@@ -77,9 +77,9 @@ class ConvertModels:
         """
         model = loadModel(self.pathToModel, torch.float32, self.device).model
         model.eval()
-        input = torch.rand(1, 3, 256, 256)
-        jitTracedModelLocation = self.pathToModel + ".pt"
-        jitTracedModel = torch.jit.trace(model, input)
+        ex_input = torch.rand(1, 3, 256, 256)
+        jitTracedModelLocation = self.pathToModel + f"_{self.dtype}"+".pt"
+        jitTracedModel = torch.jit.trace(model, ex_input)
         jitTracedModel.save(jitTracedModelLocation)
 
         pnnxBinLocation = self.pathToModel + ".pnnx.bin"
@@ -87,7 +87,8 @@ class ConvertModels:
         pnnxPythonLocation = self.pathToModel + "_pnnx.py"
         pnnxOnnxLocation = self.pathToModel + ".pnnx.onnx"
         ncnnPythonLocation = self.pathToModel + "_ncnn.py"
-        ncnnParamLocation = self.pathToModel + ".ncnn.param"
+        ncnnParamLocation = self.pathToModel + f"_{self.dtype}" + ".ncnn.param"
+        ncnnBinLocation = self.pathToModel + f"_{self.dtype}" + "ncnn.bin"
 
         # pnnx gives out a lot of weird errors, so i will be try/excepting this.
         # usually nothing goes wrong, but it cant take in the pnnxbin/pnnxparam location on windows.
@@ -95,7 +96,7 @@ class ConvertModels:
         try:
             model = pnnx.convert(
                 ptpath=jitTracedModelLocation,
-                inputs=input,
+                inputs=ex_input,
                 device=self.device,
                 optlevel=2,
                 fp16=self.dtype == torch.float16,
@@ -104,6 +105,7 @@ class ConvertModels:
                 pnnxpy=pnnxPythonLocation,
                 pnnxonnx=pnnxOnnxLocation,
                 ncnnpy=ncnnPythonLocation,
+                ncnnbin=ncnnBinLocation
             )
         except Exception as e:
             warnAndLog(f"Something may have gone wrong with conversion! {e}")
