@@ -105,7 +105,8 @@ class ConvertModels:
                 pnnxpy=pnnxPythonLocation,
                 pnnxonnx=pnnxOnnxLocation,
                 ncnnpy=ncnnPythonLocation,
-                ncnnbin=ncnnBinLocation
+                ncnnbin=ncnnBinLocation,
+                ncnnparam=ncnnParamLocation,
             )
         except Exception as e:
             warnAndLog(f"Something may have gone wrong with conversion! {e}")
