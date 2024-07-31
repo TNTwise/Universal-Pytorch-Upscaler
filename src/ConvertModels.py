@@ -88,7 +88,7 @@ class ConvertModels:
         pnnxOnnxLocation = self.pathToModel + ".pnnx.onnx"
         ncnnPythonLocation = self.pathToModel + "_ncnn.py"
         ncnnParamLocation = self.pathToModel + f"_{self.dtype}" + ".ncnn.param"
-        ncnnBinLocation = self.pathToModel + f"_{self.dtype}" + "ncnn.bin"
+        ncnnBinLocation = self.pathToModel + f"_{self.dtype}" + ".ncnn.bin"
 
         # pnnx gives out a lot of weird errors, so i will be try/excepting this.
         # usually nothing goes wrong, but it cant take in the pnnxbin/pnnxparam location on windows.
