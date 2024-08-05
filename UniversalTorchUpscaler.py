@@ -18,8 +18,8 @@ class HandleApplication:
                 self.pytorchRenderSingleImage(self.args.input)
             if self.args.backend == "ncnn":
                 self.ncnnRenderSingleImage(self.args.input)
-        elif self.args.export.lower().strip() == "onnx":
-            self.exportModelAsONNX()
+        elif "onnx" in self.args.export.lower().strip():
+            self.exportModelAsONNX(self.args.export.lower().strip())
         elif self.args.export.lower().strip() == "ncnn":
             self.exportModelAsNCNN()
 
@@ -45,7 +45,11 @@ class HandleApplication:
             dtype=self.dtype,
         ).convertModel()
 
-    def exportModelAsONNX(self):
+    def exportModelAsONNX(self, onnx_method):
+        dynamic_axes={
+                "input": {0: "batch_size", 2: "width", 3: "height"},
+                "output": {0: "batch_size", 2: "width", 3: "height"},
+            }
         ConvertModels(
             modelName=self.args.modelName,
             pathToModel=self.fullModelPathandName(),
@@ -54,6 +58,7 @@ class HandleApplication:
             device=self.returnDevice(),
             dtype=self.dtype,
             opset=17,
+            onnxDynamicAxes=dynamic_axes if onnx_method == "onnx-dynamic" else None
         ).convertModel()
 
     def pytorchRenderSingleImage(self, imagePath: str):
@@ -168,7 +173,7 @@ class HandleApplication:
         parser.add_argument(
             "-e",
             "--export",
-            help="Export PyTorch models to ONNX and NCNN. Options: (onnx/ncnn)",
+            help="Export PyTorch models to ONNX and NCNN. Options: (onnx-static/onnx-dynamic/ncnn)",
             default=None,
             type=str,
         )

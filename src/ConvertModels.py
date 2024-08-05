@@ -18,7 +18,7 @@ class ConvertModels:
         device: str = "cpu",
         dtype: torch.dtype = torch.float32,
         opset: int = 18,
-        onnxDynamicAxess: dict = None,
+        onnxDynamicAxes: dict = None,
     ):
         self.modelName = modelName
         self.pathToModel = pathToModel
@@ -29,7 +29,7 @@ class ConvertModels:
         self.device = device
         self.opset = opset
         self.dtype = dtype
-        self.onnxDynamicAxes = onnxDynamicAxess
+        self.onnxDynamicAxes = onnxDynamicAxes
 
     def convertModel(self):
         self.input = torch.rand(1, 3, 256, 256).to(device=self.device, dtype=self.dtype)
