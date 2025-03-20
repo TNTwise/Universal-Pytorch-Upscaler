@@ -126,6 +126,6 @@ class ConvertModels:
             os.remove(os.path.join(cwd, "debug.param"))
             os.remove(os.path.join(cwd, "debug2.bin"))
             os.remove(os.path.join(cwd, "debug2.param"))
-        except:
+        except Exception as e:
             warnAndLog(f"Failed to remove debug pnnx files. {e} ")
         self.fixNCNNParamInput(ncnnParamLocation)
